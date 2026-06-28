@@ -101,3 +101,20 @@ Use the following command to verify the current provisional baseline candidate:
 python run_v3_0_verify_provisional_baseline.py \
   --command-log data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl \
   --output-dir testdata/provisional_baseline_verify
+
+## Provisional baseline Gazebo final check
+
+Target:
+
+- data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl
+
+Result:
+
+- Gazebo replay: OK
+- No visible flip / floor-penetrating posture
+- No abnormal motion around RF-4/RF-5
+- Completed normally
+
+Decision:
+
+candidate02_softlimit_94p8 is confirmed as the current provisional baseline candidate.
