@@ -92,3 +92,12 @@ fourth roll, so it is not a Gazebo-confirmed baseline.
 - Ability to return from experimental candidates to baseline
 - JSONL command log compatibility
 - Gazebo replay compatibility
+
+## Provisional baseline verification command
+
+Use the following command to verify the current provisional baseline candidate:
+
+```bash
+python run_v3_0_verify_provisional_baseline.py \
+  --command-log data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl \
+  --output-dir testdata/provisional_baseline_verify
