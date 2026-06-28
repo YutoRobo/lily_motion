@@ -13,3 +13,28 @@ plots/
 
 .gazebo/
 .cache/testdata/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated test / plot outputs
+testdata/
+plots/
+plot/
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.zip
+*.log
+*.tmp
+
+# ROS / Gazebo
+*.bag
+.gazebo/
+.cache/
+
+# Editor
+.vscode/
+*.swp
