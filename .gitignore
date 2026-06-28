@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+
+testdata/
+plots/
+*.bag
+*.log
+*.tmp
+*.png
+*.pdf
+*.zip
+
+.gazebo/
+.cache/testdata/
