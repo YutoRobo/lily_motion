@@ -110,3 +110,63 @@ Promote candidate02_softlimit_94p8 to the next reference candidate.
 It removes the second-joint 95 deg violation without worsening adjacent delta, second difference, floor/contact metrics, or inter-leg collision metrics.
 
 It is not yet a final baseline because it is a joint-space postprocess candidate and foot penetration remains unresolved.
+
+## candidate02_softlimit_94p8 foot penetration localization
+
+### Branch
+
+eval/candidate02-softlimit-foot-penetration
+
+### Target
+
+data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl
+
+### Result
+
+- foot_min_clearance_m: -0.03017711684493357
+- foot_penetration_count: 1986
+- worst:
+  - roll_index: 2
+  - phase_name: RF-2_Goal2_UpperLegLanding
+  - leg_name: TLH
+  - frame_index: 147
+  - phase_step_index: 3
+  - penetration_m: 0.03017711684493357
+
+### Distribution
+
+- RF-2_Goal2_UpperLegLanding: 1730
+- RF-1_Goal1_UpperLegPreSwing: 192
+- RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor: 64
+- RF-3/RF-4/RF-5/RF-6: 0
+
+### Role
+
+All foot penetration samples are support-side samples.
+
+- support: 1986
+- swing / landing_swing: 0
+
+### Comparison with source candidate_02
+
+The values are identical to the source candidate_02.
+
+- source candidate_02 foot_min_clearance_m: -0.03017711684493357
+- source candidate_02 foot_penetration_count: 1986
+- softlimit foot_min_clearance_m: -0.03017711684493357
+- softlimit foot_penetration_count: 1986
+
+### Interpretation
+
+The foot penetration is not caused by the second-joint softlimit postprocess.
+
+It is concentrated in support feet during RF-1/RF-2 and is likely a legacy FK / body pose / ground-height proxy issue rather than a newly introduced swing-foot dragging issue.
+
+Second joint penetration, inter-leg collision, and housing collision are all zero.
+
+### Decision
+
+Do not block candidate02_softlimit_94p8 adoption as the next provisional baseline candidate based only on this support-foot proxy penetration.
+
+Treat swing-foot penetration, second-joint penetration, inter-leg collision, housing collision, and Gazebo visual failure as hard gates.
+Treat support-foot proxy penetration as a monitored metric.
