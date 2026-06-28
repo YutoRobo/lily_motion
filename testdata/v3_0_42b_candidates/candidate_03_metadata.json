@@ -1,0 +1,104 @@
+{
+  "case": {
+    "body_z": 0.39, 
+    "goal2_dist_front": 0.4, 
+    "goal2_landing_z": 0.0, 
+    "goal2_pitch_scale": 0.9, 
+    "goal2_x_scale": 1.0, 
+    "goal3_lift_z": 0.05, 
+    "goal3_target_x": 0.2, 
+    "goal4_target_x": 0.05, 
+    "goal5_pitch_scale": 1.0, 
+    "goal5_x_scale": 1.0, 
+    "move_dist": 0.4, 
+    "support_dist": 0.75
+  }, 
+  "case_index": 70, 
+  "filtered_command_log": "testdata/v3_0_42b_candidates/candidate_03_x8_sw40_commands.jsonl", 
+  "filtered_max_abs_angle_deg": 97.81149196965846, 
+  "filtered_violation_frame_rate": 0.11509180474697717, 
+  "gate_status": {
+    "angle_limit_ok": false, 
+    "checks": [
+      {
+        "limit": true, 
+        "name": "candidate_completed", 
+        "ok": true, 
+        "value": true
+      }, 
+      {
+        "limit": 109.77830887803466, 
+        "name": "angle_improves_vs_baseline", 
+        "ok": true, 
+        "value": 97.81149196965846
+      }, 
+      {
+        "limit": 95.0, 
+        "name": "angle_below_limit", 
+        "ok": false, 
+        "value": 97.81149196965846
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_inter_leg_collision", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_joint_housing_collision", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_inter_leg_near", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_joint_housing_near", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 6, 
+        "name": "ground_penetration_not_worse_than_baseline", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 6, 
+        "name": "foot_penetration_not_worse_than_baseline", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 1.1, 
+        "name": "adjacent_delta_ratio_ok", 
+        "ok": true, 
+        "value": 1.08648700972219
+      }, 
+      {
+        "limit": 1.2, 
+        "name": "second_diff_ratio_ok", 
+        "ok": true, 
+        "value": 0.9506755488276384
+      }, 
+      {
+        "limit": 1.1, 
+        "name": "boundary_delta_ratio_ok", 
+        "ok": false, 
+        "value": 1.2389121968324852
+      }
+    ], 
+    "gazebo_replay_required": true, 
+    "hard_gate_ok": false, 
+    "note": "hard_gate_ok is not final acceptance. Saved candidates still require strict Gazebo command-log replay and visual inspection."
+  }, 
+  "gazebo_replay_command": "rosrun lily_octpus_walk run_v3_0_gazebo_replay.py --command-log testdata/v3_0_42b_candidates/candidate_03_x8_sw40_commands.jsonl --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log", 
+  "rank": 3, 
+  "raw_command_log": "testdata/v3_0_42b_candidates/candidate_03_raw_commands.jsonl", 
+  "score": 96486737.93757331
+}

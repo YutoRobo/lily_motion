@@ -1,0 +1,226 @@
+{
+  "case": {
+    "body_z": 0.4, 
+    "goal2_dist_front": 0.4, 
+    "goal2_landing_z": 0.0, 
+    "goal2_pitch_scale": 0.85, 
+    "goal2_x_scale": 0.95, 
+    "goal3_lift_z": 0.05, 
+    "goal3_target_x": 0.2, 
+    "goal4_target_x": 0.05, 
+    "goal5_pitch_scale": 1.0, 
+    "goal5_x_scale": 1.0, 
+    "move_dist": 0.4, 
+    "support_dist": 0.75
+  }, 
+  "case_index": 17, 
+  "compact_flip_filtered": {
+    "max_boundary_flip_extension_score": 3.814573712360718, 
+    "max_flip_extension_score": 3.9564920959288643, 
+    "max_mount_to_foot_extension_ratio": 0.999888588927592, 
+    "max_support_phase_two_link_extension_ratio": 0.9258358495394031, 
+    "max_two_link_extension_ratio": 0.9999138879554211, 
+    "note": "Proxy only: low values are preferred, but final acceptance still requires Gazebo visual inspection. This metric was added after candidate_02 showed support-leg stretch despite acceptable numeric scores.", 
+    "worst_boundary_flip_extension": {
+      "flip_extension_score": 3.814573712360718, 
+      "from_frame_index": 70, 
+      "from_phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+      "from_roll_index": 1, 
+      "is_phase_or_roll_boundary": true, 
+      "joint_base_index": 9, 
+      "leg_index_in_joint_state_order": 3, 
+      "mount_to_foot_extension_ratio": 0.7715200701374665, 
+      "to_frame_index": 71, 
+      "to_phase_name": "RF-1_Goal1_UpperLegPreSwing", 
+      "to_roll_index": 1, 
+      "transition_index": 567, 
+      "two_link_extension_ratio": 0.7596018547615464, 
+      "yaw_delta_deg": 4.94423134278419
+    }, 
+    "worst_flip_extension": {
+      "flip_extension_score": 3.9564920959288643, 
+      "from_frame_index": 70, 
+      "from_phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+      "from_roll_index": 1, 
+      "is_phase_or_roll_boundary": false, 
+      "joint_base_index": 6, 
+      "leg_index_in_joint_state_order": 2, 
+      "mount_to_foot_extension_ratio": 0.8002239016795064, 
+      "to_frame_index": 70, 
+      "to_phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+      "to_roll_index": 1, 
+      "transition_index": 563, 
+      "two_link_extension_ratio": 0.7931069320165568, 
+      "yaw_delta_deg": 4.9442313427841835
+    }, 
+    "worst_mount_to_foot_extension": {
+      "frame_index": 0, 
+      "joint_base_index": 12, 
+      "leg_index_in_joint_state_order": 4, 
+      "mount_to_foot_extension_ratio": 0.999888588927592, 
+      "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+      "q0_deg": -2.551218915903422e-16, 
+      "q1_deg": -2.4700543856597448, 
+      "q2_deg": 1.5038436727439821, 
+      "record_index": 3, 
+      "roll_index": 0, 
+      "two_link_extension_ratio": 0.9999138879554211
+    }, 
+    "worst_support_phase_two_link_extension": {
+      "frame_index": 171, 
+      "joint_base_index": 6, 
+      "leg_index_in_joint_state_order": 2, 
+      "mount_to_foot_extension_ratio": 0.9029602722043956, 
+      "phase_name": "RF-3_Goal3_LiftMiddlePair", 
+      "q0_deg": 150.38891092322982, 
+      "q1_deg": 30.83715090478085, 
+      "q2_deg": 44.41053332707038, 
+      "record_index": 1372, 
+      "roll_index": 2, 
+      "two_link_extension_ratio": 0.9258358495394031
+    }, 
+    "worst_two_link_extension": {
+      "frame_index": 0, 
+      "joint_base_index": 12, 
+      "leg_index_in_joint_state_order": 4, 
+      "mount_to_foot_extension_ratio": 0.999888588927592, 
+      "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+      "q0_deg": -2.551218915903422e-16, 
+      "q1_deg": -2.4700543856597448, 
+      "q2_deg": 1.5038436727439821, 
+      "record_index": 3, 
+      "roll_index": 0, 
+      "two_link_extension_ratio": 0.9999138879554211
+    }
+  }, 
+  "filtered_command_log": "testdata/v3_0_42c_candidates/candidate_03_x8_sw40_commands.jsonl", 
+  "filtered_max_abs_angle_deg": 96.6739146877998, 
+  "filtered_violation_frame_rate": 0.0600089565606807, 
+  "gate_status": {
+    "angle_limit_ok": false, 
+    "checks": [
+      {
+        "limit": true, 
+        "name": "candidate_completed", 
+        "ok": true, 
+        "value": true
+      }, 
+      {
+        "limit": 109.77830887803466, 
+        "name": "angle_improves_vs_baseline", 
+        "ok": true, 
+        "value": 96.6739146877998
+      }, 
+      {
+        "limit": 95.0, 
+        "name": "angle_below_limit", 
+        "ok": false, 
+        "value": 96.6739146877998
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_inter_leg_collision", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_joint_housing_collision", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_inter_leg_near", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 0, 
+        "name": "no_joint_housing_near", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 6, 
+        "name": "ground_penetration_not_worse_than_baseline", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 6, 
+        "name": "foot_penetration_not_worse_than_baseline", 
+        "ok": true, 
+        "value": null
+      }, 
+      {
+        "limit": 1.1, 
+        "name": "adjacent_delta_ratio_ok", 
+        "ok": true, 
+        "value": 0.9442148728009662
+      }, 
+      {
+        "limit": 1.2, 
+        "name": "second_diff_ratio_ok", 
+        "ok": true, 
+        "value": 0.9446055065202617
+      }, 
+      {
+        "limit": 1.25, 
+        "name": "boundary_delta_ratio_ok", 
+        "ok": true, 
+        "value": 0.9886582783522726
+      }, 
+      {
+        "limit": 0.99995, 
+        "name": "support_extension_ratio_ok", 
+        "ok": true, 
+        "value": 0.9258358495394031
+      }, 
+      {
+        "limit": 1.1, 
+        "name": "flip_extension_ratio_ok", 
+        "ok": true, 
+        "value": 1.0567025773345287
+      }, 
+      {
+        "limit": 1.25, 
+        "name": "boundary_flip_extension_ratio_ok", 
+        "ok": true, 
+        "value": 1.0523427379175603
+      }
+    ], 
+    "gazebo_replay_required": true, 
+    "hard_gate_ok": true, 
+    "note": "hard_gate_ok is not final acceptance. v3.0.42C intentionally does not hard-reject boundary_delta_ratio because candidate_03 looked better in Gazebo despite a boundary warning. Strict replay and visual inspection are mandatory."
+  }, 
+  "gazebo_replay_command": "python run_v3_0_gazebo_replay.py --command-log testdata/v3_0_42c_candidates/candidate_03_x8_sw40_commands.jsonl --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log", 
+  "rank": 3, 
+  "raw_command_log": "testdata/v3_0_42c_candidates/candidate_03_raw_commands.jsonl", 
+  "score": 95808064.95857504, 
+  "visual_anchor_distance": {
+    "anchor_case": {
+      "body_z": 0.39, 
+      "goal2_dist_front": 0.4, 
+      "goal2_landing_z": 0.0, 
+      "goal2_pitch_scale": 0.9, 
+      "goal2_x_scale": 1.0, 
+      "goal3_lift_z": 0.05, 
+      "goal3_target_x": 0.2, 
+      "goal4_target_x": 0.05, 
+      "goal5_pitch_scale": 1.0, 
+      "goal5_x_scale": 1.0, 
+      "move_dist": 0.4, 
+      "support_dist": 0.75
+    }, 
+    "distance": 1.3000000000000012, 
+    "parts": {
+      "body_z": 0.5000000000000004, 
+      "goal2_pitch_scale": 0.40000000000000036, 
+      "goal2_x_scale": 0.40000000000000036, 
+      "goal4_target_x": 0.0, 
+      "move_dist": 0.0, 
+      "support_dist": 0.0
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# -*- coding: utf-8 -*-
+"""Role labels used by v3 contact-state based gait design."""
+
+SUPPORT = "SUPPORT"
+CANDIDATE_SUPPORT = "CANDIDATE_SUPPORT"
+LIFT = "LIFT"
+CLEARANCE = "CLEARANCE"
+TRANSFER = "TRANSFER"
+OTHER = "OTHER"
+
+ALL_ROLES = [SUPPORT, CANDIDATE_SUPPORT, LIFT, CLEARANCE, TRANSFER, OTHER]

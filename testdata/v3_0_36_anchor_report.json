@@ -1,0 +1,321 @@
+{
+  "candidate_completed": true,
+  "command_diagnostics": {
+    "deltas_deg": [
+      286.97982885957606,
+      117.60777037269452,
+      67.68652293585987,
+      286.9798288595758,
+      117.60777037269455,
+      67.68652293585986,
+      249.10880031592455,
+      121.36003403336373,
+      73.17914683687574,
+      249.1088003159243,
+      121.3600340333638,
+      73.17914683687584,
+      287.96340050268526,
+      171.1804776435218,
+      264.491385953105,
+      287.9634005026851,
+      171.18047764352178,
+      264.49138595310495,
+      287.96340081686634,
+      118.77030846148438,
+      67.81056900536196,
+      287.96340081686645,
+      118.77030846148438,
+      67.81056900536196
+    ],
+    "deltas_rad": [
+      5.0087429004094455,
+      2.052642818932958,
+      1.1813526844574134,
+      5.008742900409441,
+      2.0526428189329584,
+      1.1813526844574131,
+      4.347768761205974,
+      2.118132174214571,
+      1.2772170561038756,
+      4.34776876120597,
+      2.1181321742145722,
+      1.2772170561038771,
+      5.025909464010952,
+      2.9876629500159995,
+      4.616245528044763,
+      5.025909464010949,
+      2.987662950015999,
+      4.616245528044762,
+      5.025909469494446,
+      2.072932936262183,
+      1.1835176967943826,
+      5.025909469494448,
+      2.072932936262183,
+      1.1835176967943826
+    ],
+    "frame_count": 280,
+    "max_delta_deg": 287.96340081686645,
+    "max_delta_rad": 5.025909469494448,
+    "nonzero_joint_count": 24
+  },
+  "constraints": {
+    "skipped": true
+  },
+  "final_lily_posture": {
+    "pitch": 6.283185307179586,
+    "roll": 0.0,
+    "x": 1.6,
+    "y": 0.0,
+    "yaw": 0.0,
+    "z": 0.35
+  },
+  "final_servo_deg_by_legacy_id": {
+    "0": [
+      104.29511947252973,
+      -59.749718141169645,
+      123.98804020023472
+    ],
+    "1": [
+      109.72134033550344,
+      -75.66930221615287,
+      129.3880005356956
+    ],
+    "2": [
+      -104.29511947252985,
+      -59.74971814116966,
+      123.98804020023472
+    ],
+    "3": [
+      -109.7213403355036,
+      -75.66930221615287,
+      129.38800053569565
+    ],
+    "4": [
+      0.0,
+      -60.0,
+      120.0
+    ],
+    "5": [
+      -150.9778693946909,
+      -7.254073031861539,
+      -84.52707158952033
+    ],
+    "6": [
+      0.0,
+      -60.0,
+      120.0
+    ],
+    "7": [
+      150.9778693946909,
+      -7.254073031861552,
+      -84.52707158952033
+    ]
+  },
+  "frame_count": 280,
+  "generation_error": null,
+  "output_command_log": "testdata/v3_0_36_anchor_commands.jsonl",
+  "parameters": {
+    "constraint_stride": 4,
+    "goal2_dist_front": 0.4,
+    "goal2_landing_z": 0.0,
+    "goal2_pitch_scale": 1.0,
+    "goal2_x_scale": 1.0,
+    "goal3_lift_z": 0.05,
+    "goal3_target_x": 0.2,
+    "goal4_target_x": 0.05,
+    "goal5_pitch_scale": 1.0,
+    "goal5_x_scale": 1.0,
+    "ground_tolerance": 0.0001,
+    "include_initialize": false,
+    "initialize_step": 100,
+    "inter_leg_limit": 0.04,
+    "legacy_body_z": 0.35,
+    "max_step": 30,
+    "move_dist": 0.4,
+    "output_command_log": "testdata/v3_0_36_anchor_commands.jsonl",
+    "report_output": "testdata/v3_0_36_anchor_report.json",
+    "rf1_current_angle_anchor": true,
+    "second_joint_abs_max_deg": 95.0,
+    "skip_constraints": true,
+    "support_dist": 0.7,
+    "surface_sequence": "1,5,6,2,1"
+  },
+  "profile": "pure_legacy_repeated_roll",
+  "quarter_roll_count": 4,
+  "roll_summaries": [
+    {
+      "end_base_pose": {
+        "pitch": 1.5707963267948954,
+        "roll": 0.0,
+        "x": 0.3999999999999995,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "end_frame": 69,
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor",
+        "RF-1_Goal1_UpperLegPreSwing",
+        "RF-2_Goal2_UpperLegLanding",
+        "RF-3_Goal3_LiftMiddlePair",
+        "RF-4_Goal4_LandMiddlePair",
+        "RF-5_Goal5_MainBodyRoll",
+        "RF-6_StopAdjustment"
+      ],
+      "roll_index": 0,
+      "start_frame": 0,
+      "surface_after": 5,
+      "surface_start": 1,
+      "transition": "1->5"
+    },
+    {
+      "end_base_pose": {
+        "pitch": 3.1415926535897984,
+        "roll": 0.0,
+        "x": 0.8000000000000017,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "end_frame": 139,
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor",
+        "RF-1_Goal1_UpperLegPreSwing",
+        "RF-2_Goal2_UpperLegLanding",
+        "RF-3_Goal3_LiftMiddlePair",
+        "RF-4_Goal4_LandMiddlePair",
+        "RF-5_Goal5_MainBodyRoll",
+        "RF-6_StopAdjustment"
+      ],
+      "roll_index": 1,
+      "start_frame": 70,
+      "surface_after": 6,
+      "surface_start": 5,
+      "transition": "5->6"
+    },
+    {
+      "end_base_pose": {
+        "pitch": 4.7123889803846986,
+        "roll": 0.0,
+        "x": 1.1999999999999993,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "end_frame": 209,
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor",
+        "RF-1_Goal1_UpperLegPreSwing",
+        "RF-2_Goal2_UpperLegLanding",
+        "RF-3_Goal3_LiftMiddlePair",
+        "RF-4_Goal4_LandMiddlePair",
+        "RF-5_Goal5_MainBodyRoll",
+        "RF-6_StopAdjustment"
+      ],
+      "roll_index": 2,
+      "start_frame": 140,
+      "surface_after": 2,
+      "surface_start": 6,
+      "transition": "6->2"
+    },
+    {
+      "end_base_pose": {
+        "pitch": 6.283185307179595,
+        "roll": 0.0,
+        "x": 1.599999999999996,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "end_frame": 279,
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor",
+        "RF-1_Goal1_UpperLegPreSwing",
+        "RF-2_Goal2_UpperLegLanding",
+        "RF-3_Goal3_LiftMiddlePair",
+        "RF-4_Goal4_LandMiddlePair",
+        "RF-5_Goal5_MainBodyRoll",
+        "RF-6_StopAdjustment"
+      ],
+      "roll_index": 3,
+      "start_frame": 210,
+      "surface_after": 1,
+      "surface_start": 2,
+      "transition": "2->1"
+    }
+  ],
+  "surface_sequence": [
+    1,
+    5,
+    6,
+    2,
+    1
+  ],
+  "terminal_updates": [
+    {
+      "controller_pitch": 1.5707963267948966,
+      "controller_x": 0.4,
+      "frame_index_after_roll": 69,
+      "lily_posture": {
+        "pitch": 1.5707963267948966,
+        "roll": 0.0,
+        "x": 0.4,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "roll_index": 0,
+      "surface_after": 5,
+      "surface_start": 1
+    },
+    {
+      "controller_pitch": 3.141592653589793,
+      "controller_x": 0.8,
+      "frame_index_after_roll": 139,
+      "lily_posture": {
+        "pitch": 3.141592653589793,
+        "roll": 0.0,
+        "x": 0.8,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "roll_index": 1,
+      "surface_after": 6,
+      "surface_start": 5
+    },
+    {
+      "controller_pitch": 4.71238898038469,
+      "controller_x": 1.2000000000000002,
+      "frame_index_after_roll": 209,
+      "lily_posture": {
+        "pitch": 4.71238898038469,
+        "roll": 0.0,
+        "x": 1.2000000000000002,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "roll_index": 2,
+      "surface_after": 2,
+      "surface_start": 6
+    },
+    {
+      "controller_pitch": 6.283185307179586,
+      "controller_x": 1.6,
+      "frame_index_after_roll": 279,
+      "lily_posture": {
+        "pitch": 6.283185307179586,
+        "roll": 0.0,
+        "x": 1.6,
+        "y": 0.0,
+        "yaw": 0.0,
+        "z": 0.35
+      },
+      "roll_index": 3,
+      "surface_after": 1,
+      "surface_start": 2
+    }
+  ],
+  "version_note": "v3.0.36: RF-1 current-angle anchor; pure legacy repeated roll remains one emulator instance, cumulative controller_x/controller_pitch, no constrained parameterizer."
+}

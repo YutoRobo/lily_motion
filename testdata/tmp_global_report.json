@@ -1,0 +1,130 @@
+{
+  "evaluator_note": "Ground and inter-leg geometry use vendored legacy FK. Inter-leg distance is an approximate tibia-segment proxy for diagnosis, not a full Gazebo collision check.",
+  "frame_count": 69,
+  "ground_penetration_count": 0,
+  "ground_tolerance_m": 0.0001,
+  "ground_z_m": 0.0,
+  "inter_leg_limit_m": 0.04,
+  "inter_leg_near_count": 0,
+  "max_second_joint_deg": 109.62295999966007,
+  "phase_summary": [
+    {
+      "frame_count": 3,
+      "ground_penetration_count": 0,
+      "inter_leg_near_count": 0,
+      "max_second_joint_deg": 66.60351679060997,
+      "min_clearance_m": -4.569605793203202e-07,
+      "min_inter_leg_distance_m": 0.12993976791103368,
+      "phase_name": "RF-1_Goal1_UpperLegPreSwing",
+      "second_joint_violation_count": 0
+    },
+    {
+      "frame_count": 27,
+      "ground_penetration_count": 0,
+      "inter_leg_near_count": 0,
+      "max_second_joint_deg": 109.62295999966007,
+      "min_clearance_m": -4.5696057948685365e-07,
+      "min_inter_leg_distance_m": 0.13487638070998909,
+      "phase_name": "RF-2_Goal2_UpperLegLanding",
+      "second_joint_violation_count": 24
+    },
+    {
+      "frame_count": 3,
+      "ground_penetration_count": 0,
+      "inter_leg_near_count": 0,
+      "max_second_joint_deg": 108.87162241289545,
+      "min_clearance_m": -4.569605793203202e-07,
+      "min_inter_leg_distance_m": 0.2863692694858811,
+      "phase_name": "RF-3_Goal3_LiftMiddlePair",
+      "second_joint_violation_count": 6
+    },
+    {
+      "frame_count": 3,
+      "ground_penetration_count": 0,
+      "inter_leg_near_count": 0,
+      "max_second_joint_deg": 105.62623970220412,
+      "min_clearance_m": -4.569605793203202e-07,
+      "min_inter_leg_distance_m": 0.3032271664939968,
+      "phase_name": "RF-4_Goal4_LandMiddlePair",
+      "second_joint_violation_count": 6
+    },
+    {
+      "frame_count": 30,
+      "ground_penetration_count": 0,
+      "inter_leg_near_count": 0,
+      "max_second_joint_deg": 104.7790263524983,
+      "min_clearance_m": 0.011111060337713141,
+      "min_inter_leg_distance_m": 0.2274684991272445,
+      "phase_name": "RF-5_Goal5_MainBodyRoll",
+      "second_joint_violation_count": 20
+    },
+    {
+      "frame_count": 3,
+      "ground_penetration_count": 0,
+      "inter_leg_near_count": 0,
+      "max_second_joint_deg": 76.04423569180439,
+      "min_clearance_m": 0.011111060337713363,
+      "min_inter_leg_distance_m": 0.2274684991272444,
+      "phase_name": "RF-6_StopAdjustment",
+      "second_joint_violation_count": 0
+    }
+  ],
+  "second_joint_limit_deg": 95.0,
+  "second_joint_violation_count": 56,
+  "top_ground_penetrations": [],
+  "top_inter_leg_near": [],
+  "top_second_joint_violations": [
+    {
+      "abs_angle_deg": 109.62295999966007,
+      "excess_deg": 14.622959999660056,
+      "frame_index": 29,
+      "leg_id": 2,
+      "leg_name": "BRF",
+      "phase_name": "RF-2_Goal2_UpperLegLanding"
+    },
+    {
+      "abs_angle_deg": 109.62295999966007,
+      "excess_deg": 14.622959999660056,
+      "frame_index": 29,
+      "leg_id": 0,
+      "leg_name": "BLF",
+      "phase_name": "RF-2_Goal2_UpperLegLanding"
+    },
+    {
+      "abs_angle_deg": 108.87162241289545,
+      "excess_deg": 13.871622412895439,
+      "frame_index": 30,
+      "leg_id": 2,
+      "leg_name": "BRF",
+      "phase_name": "RF-3_Goal3_LiftMiddlePair"
+    }
+  ],
+  "worst_ground_clearance": {
+    "clearance_m": -4.5696057948685365e-07,
+    "frame_index": 25,
+    "leg_id": 3,
+    "leg_name": "BRH",
+    "phase_name": "RF-2_Goal2_UpperLegLanding",
+    "point": "foot",
+    "z_m": -4.5696057948685365e-07
+  },
+  "worst_inter_leg_distance": {
+    "distance_m": 0.12993976791103368,
+    "frame_index": 0,
+    "leg_a_id": 1,
+    "leg_a_name": "BLH",
+    "leg_b_id": 5,
+    "leg_b_name": "TLH",
+    "phase_name": "RF-1_Goal1_UpperLegPreSwing"
+  },
+  "worst_second_joint": {
+    "abs_angle_deg": 109.62295999966007,
+    "abs_angle_rad": 1.91328158777611,
+    "frame_index": 29,
+    "joint_index": 1,
+    "joint_name": "thigh",
+    "leg_id": 2,
+    "leg_name": "BRF",
+    "phase_name": "RF-2_Goal2_UpperLegLanding"
+  }
+}

@@ -1,0 +1,1133 @@
+{
+  "candidate_completed": true, 
+  "command_diagnostics": {
+    "deltas_deg": [
+      227.79303067935712, 
+      123.44500753807223, 
+      89.35371402736183, 
+      227.79303067935712, 
+      123.44500753807228, 
+      89.35371402736192, 
+      221.43725023317958, 
+      123.48034581546607, 
+      89.4919895394876, 
+      221.43725023317964, 
+      123.48034581546607, 
+      89.4919895394876, 
+      249.0316780765965, 
+      145.67707286296607, 
+      237.5020691167258, 
+      249.03167807659707, 
+      145.67707286296607, 
+      237.50206911672583, 
+      257.6648569084192, 
+      184.22520512379123, 
+      257.223264738247, 
+      257.66485690841995, 
+      184.2252051237912, 
+      257.223264738247
+    ], 
+    "deltas_rad": [
+      3.975738398451237, 
+      2.1545218266885797, 
+      1.5595165086629066, 
+      3.975738398451237, 
+      2.1545218266885806, 
+      1.559516508662908, 
+      3.864809103131565, 
+      2.1551385959810854, 
+      1.5619298716243826, 
+      3.8648091031315657, 
+      2.1551385959810854, 
+      1.5619298716243826, 
+      4.3464227242031885, 
+      2.5425445661264403, 
+      4.145193086386006, 
+      4.346422724203198, 
+      2.5425445661264403, 
+      4.145193086386007, 
+      4.497100119731972, 
+      3.2153363945720845, 
+      4.48939288241144, 
+      4.497100119731986, 
+      3.215336394572084, 
+      4.48939288241144
+    ], 
+    "frame_count": 280, 
+    "max_delta_deg": 257.66485690841995, 
+    "max_delta_rad": 4.497100119731986, 
+    "nonzero_joint_count": 24
+  }, 
+  "constraints": {
+    "clearance_by_part": {
+      "foot": {
+        "max_penetration_depth_m": 0.012576622640165125, 
+        "min_clearance_m": -0.012576622640165125, 
+        "penetration_count": 48, 
+        "point_name": "foot", 
+        "worst": {
+          "clearance_m": -0.012576622640165125, 
+          "frame_index": 152, 
+          "leg_id": 7, 
+          "leg_name": "TRH", 
+          "penetration_m": 0.012576622640165125, 
+          "phase_name": "RF-2_Goal2_UpperLegLanding", 
+          "phase_step_index": 8, 
+          "point": "foot", 
+          "roll_index": 2, 
+          "z_m": -0.012576622640165125
+        }
+      }, 
+      "second_joint": {
+        "max_penetration_depth_m": 0.0, 
+        "min_clearance_m": 0.04963730902448732, 
+        "penetration_count": 0, 
+        "point_name": "second_joint", 
+        "worst": {
+          "clearance_m": 0.04963730902448732, 
+          "frame_index": 212, 
+          "leg_id": 7, 
+          "leg_name": "TRH", 
+          "penetration_m": 0.0, 
+          "phase_name": "RF-1_Goal1_UpperLegPreSwing", 
+          "phase_step_index": 1, 
+          "point": "second_joint", 
+          "roll_index": 3, 
+          "z_m": 0.04963730902448732
+        }
+      }
+    }, 
+    "constraint_stride": 4, 
+    "evaluated_frame_count": 71, 
+    "evaluator_note": "Ground and inter-leg geometry use vendored legacy FK. Body pitch is included by transforming robot/body coordinates to world coordinates before comparing world_z against the fixed Gazebo ground plane. Inter-leg collision uses capsule approximation: upper/lower link segments are transformed to world coordinates and checked by exact segment-segment distance. collision if distance < 2*leg_radius; near if distance < max(inter_leg_limit, 2*leg_radius+safety_margin). v3.0.40 also checks second-third joint housing spheres against other-leg upper/lower link capsules, to catch bulky joint/link visual contacts that link-centerline segment checks can miss.", 
+    "foot_clearance": {
+      "max_penetration_depth_m": 0.012576622640165125, 
+      "min_clearance_m": -0.012576622640165125, 
+      "penetration_count": 48, 
+      "point_name": "foot", 
+      "worst": {
+        "clearance_m": -0.012576622640165125, 
+        "frame_index": 152, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640165125, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 8, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640165125
+      }
+    }, 
+    "frame_count": 71, 
+    "ground_penetration_count": 48, 
+    "ground_tolerance_m": 0.0001, 
+    "ground_z_m": 0.0, 
+    "inter_leg_collision": {
+      "collision_count": 0, 
+      "collision_threshold_m": 0.03, 
+      "link_radius_m": 0.015, 
+      "method": "capsule_segment_distance", 
+      "min_distance_m": 0.14160573204205312, 
+      "near_count": 0, 
+      "required_clearance_m": 0.04, 
+      "safety_margin_m": 0.01, 
+      "top_collisions": [], 
+      "top_near": [], 
+      "worst": {
+        "clearance_margin_m": 0.10160573204205312, 
+        "collision_threshold_m": 0.03, 
+        "distance_m": 0.14160573204205312, 
+        "frame_index": 28, 
+        "leg_a_id": 0, 
+        "leg_a_name": "BLF", 
+        "leg_b_id": 4, 
+        "leg_b_name": "TLF", 
+        "link_a": "upper", 
+        "link_b": "upper", 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 24, 
+        "required_clearance_m": 0.04, 
+        "roll_index": 0
+      }
+    }, 
+    "inter_leg_collision_count": 0, 
+    "inter_leg_collision_threshold_m": 0.03, 
+    "inter_leg_joint_housing_collision": {
+      "collision_count": 0, 
+      "collision_threshold_m": 0.045, 
+      "joint_housing_radius_m": 0.03, 
+      "link_radius_m": 0.015, 
+      "method": "joint_sphere_to_other_leg_link_capsule_distance", 
+      "min_distance_m": 0.14160573204205318, 
+      "near_count": 0, 
+      "required_clearance_m": 0.055, 
+      "safety_margin_m": 0.01, 
+      "top_collisions": [], 
+      "top_near": [], 
+      "worst": {
+        "clearance_margin_m": 0.08660573204205319, 
+        "collision_threshold_m": 0.045, 
+        "distance_m": 0.14160573204205318, 
+        "frame_index": 28, 
+        "joint_leg_id": 0, 
+        "joint_leg_name": "BLF", 
+        "joint_name": "second_third_joint_housing", 
+        "link_leg_id": 4, 
+        "link_leg_name": "TLF", 
+        "link_name": "upper", 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 24, 
+        "required_clearance_m": 0.055, 
+        "roll_index": 0
+      }
+    }, 
+    "inter_leg_joint_housing_collision_count": 0, 
+    "inter_leg_joint_housing_near_count": 0, 
+    "inter_leg_limit_m": 0.04, 
+    "inter_leg_link_radius_m": 0.015, 
+    "inter_leg_near_count": 0, 
+    "inter_leg_required_clearance_m": 0.04, 
+    "inter_leg_safety_margin_m": 0.01, 
+    "max_second_joint_deg": 95.17233930662375, 
+    "phase_summary": [
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.012576622637880619, 
+            "min_clearance_m": -0.012576622637880619, 
+            "penetration_count": 4, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": -0.012576622637880619, 
+              "frame_index": 72, 
+              "leg_id": 6, 
+              "leg_name": "TRF", 
+              "penetration_m": 0.012576622637880619, 
+              "phase_name": "RF-1_Goal1_UpperLegPreSwing", 
+              "phase_step_index": 1, 
+              "point": "foot", 
+              "roll_index": 1, 
+              "z_m": -0.012576622637880619
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.04963730902448732, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.04963730902448732, 
+              "frame_index": 212, 
+              "leg_id": 7, 
+              "leg_name": "TRH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-1_Goal1_UpperLegPreSwing", 
+              "phase_step_index": 1, 
+              "point": "second_joint", 
+              "roll_index": 3, 
+              "z_m": 0.04963730902448732
+            }
+          }
+        }, 
+        "frame_count": 2, 
+        "ground_penetration_count": 4, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 72.90064888767911, 
+        "min_clearance_m": -0.012576622637880619, 
+        "min_inter_leg_distance_m": 0.283293530858172, 
+        "min_joint_housing_distance_m": 0.2947984126380942, 
+        "phase_name": "RF-1_Goal1_UpperLegPreSwing", 
+        "second_joint_violation_count": 0
+      }, 
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.012576622640164847, 
+            "min_clearance_m": -0.012576622640164847, 
+            "penetration_count": 2, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": -0.012576622640164847, 
+              "frame_index": 140, 
+              "leg_id": 7, 
+              "leg_name": "TRH", 
+              "penetration_m": 0.012576622640164847, 
+              "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+              "phase_step_index": 0, 
+              "point": "foot", 
+              "roll_index": 2, 
+              "z_m": -0.012576622640164847
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.08454906173231103, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.08454906173231103, 
+              "frame_index": 140, 
+              "leg_id": 6, 
+              "leg_name": "TRF", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+              "phase_step_index": 0, 
+              "point": "second_joint", 
+              "roll_index": 2, 
+              "z_m": 0.08454906173231103
+            }
+          }
+        }, 
+        "frame_count": 2, 
+        "ground_penetration_count": 2, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 71.14024759953945, 
+        "min_clearance_m": -0.012576622640164847, 
+        "min_inter_leg_distance_m": 0.20001428974820462, 
+        "min_joint_housing_distance_m": 0.20001428974820462, 
+        "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "second_joint_violation_count": 0
+      }, 
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.012576622640165125, 
+            "min_clearance_m": -0.012576622640165125, 
+            "penetration_count": 42, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": -0.012576622640165125, 
+              "frame_index": 152, 
+              "leg_id": 7, 
+              "leg_name": "TRH", 
+              "penetration_m": 0.012576622640165125, 
+              "phase_name": "RF-2_Goal2_UpperLegLanding", 
+              "phase_step_index": 8, 
+              "point": "foot", 
+              "roll_index": 2, 
+              "z_m": -0.012576622640165125
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.1147330027760678, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.1147330027760678, 
+              "frame_index": 144, 
+              "leg_id": 5, 
+              "leg_name": "TLH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-2_Goal2_UpperLegLanding", 
+              "phase_step_index": 0, 
+              "point": "second_joint", 
+              "roll_index": 2, 
+              "z_m": 0.1147330027760678
+            }
+          }
+        }, 
+        "frame_count": 28, 
+        "ground_penetration_count": 42, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 92.96773595410873, 
+        "min_clearance_m": -0.012576622640165125, 
+        "min_inter_leg_distance_m": 0.14160573204205312, 
+        "min_joint_housing_distance_m": 0.14160573204205318, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "second_joint_violation_count": 0
+      }, 
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": -3.312711643888022e-08, 
+            "penetration_count": 0, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": -3.312711643888022e-08, 
+              "frame_index": 32, 
+              "leg_id": 3, 
+              "leg_name": "BRH", 
+              "penetration_m": 3.312711643888022e-08, 
+              "phase_name": "RF-3_Goal3_LiftMiddlePair", 
+              "phase_step_index": 1, 
+              "point": "foot", 
+              "roll_index": 0, 
+              "z_m": -3.312711643888022e-08
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.282326151667606, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.282326151667606, 
+              "frame_index": 32, 
+              "leg_id": 1, 
+              "leg_name": "BLH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-3_Goal3_LiftMiddlePair", 
+              "phase_step_index": 1, 
+              "point": "second_joint", 
+              "roll_index": 0, 
+              "z_m": 0.282326151667606
+            }
+          }
+        }, 
+        "frame_count": 2, 
+        "ground_penetration_count": 0, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 93.28619559712064, 
+        "min_clearance_m": -3.312711643888022e-08, 
+        "min_inter_leg_distance_m": 0.25584920098286124, 
+        "min_joint_housing_distance_m": 0.2582809968766534, 
+        "phase_name": "RF-3_Goal3_LiftMiddlePair", 
+        "second_joint_violation_count": 0
+      }, 
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": -3.312711649439137e-08, 
+            "penetration_count": 0, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": -3.312711649439137e-08, 
+              "frame_index": 36, 
+              "leg_id": 3, 
+              "leg_name": "BRH", 
+              "penetration_m": 3.312711649439137e-08, 
+              "phase_name": "RF-4_Goal4_LandMiddlePair", 
+              "phase_step_index": 2, 
+              "point": "foot", 
+              "roll_index": 0, 
+              "z_m": -3.312711649439137e-08
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.2697738695632894, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.2697738695632894, 
+              "frame_index": 176, 
+              "leg_id": 5, 
+              "leg_name": "TLH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-4_Goal4_LandMiddlePair", 
+              "phase_step_index": 2, 
+              "point": "second_joint", 
+              "roll_index": 2, 
+              "z_m": 0.2697738695632894
+            }
+          }
+        }, 
+        "frame_count": 4, 
+        "ground_penetration_count": 0, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 95.17233930662375, 
+        "min_clearance_m": -3.312711649439137e-08, 
+        "min_inter_leg_distance_m": 0.1747008528809842, 
+        "min_joint_housing_distance_m": 0.1747008528809842, 
+        "phase_name": "RF-4_Goal4_LandMiddlePair", 
+        "second_joint_violation_count": 4
+      }, 
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.00971370859553733, 
+            "penetration_count": 0, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": 0.00971370859553733, 
+              "frame_index": 180, 
+              "leg_id": 5, 
+              "leg_name": "TLH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-5_Goal5_MainBodyRoll", 
+              "phase_step_index": 3, 
+              "point": "foot", 
+              "roll_index": 2, 
+              "z_m": 0.00971370859553733
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.08488896227783432, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.08488896227783432, 
+              "frame_index": 276, 
+              "leg_id": 1, 
+              "leg_name": "BLH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-5_Goal5_MainBodyRoll", 
+              "phase_step_index": 29, 
+              "point": "second_joint", 
+              "roll_index": 3, 
+              "z_m": 0.08488896227783432
+            }
+          }
+        }, 
+        "frame_count": 30, 
+        "ground_penetration_count": 0, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 93.51170196692784, 
+        "min_clearance_m": 0.00971370859553733, 
+        "min_inter_leg_distance_m": 0.1852669114378773, 
+        "min_joint_housing_distance_m": 0.1852669114378773, 
+        "phase_name": "RF-5_Goal5_MainBodyRoll", 
+        "second_joint_violation_count": 0
+      }, 
+      {
+        "clearance_by_part": {
+          "foot": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.009713708595537274, 
+            "penetration_count": 0, 
+            "point_name": "foot", 
+            "worst": {
+              "clearance_m": 0.009713708595537274, 
+              "frame_index": 208, 
+              "leg_id": 7, 
+              "leg_name": "TRH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-6_StopAdjustment", 
+              "phase_step_index": 1, 
+              "point": "foot", 
+              "roll_index": 2, 
+              "z_m": 0.009713708595537274
+            }
+          }, 
+          "second_joint": {
+            "max_penetration_depth_m": 0.0, 
+            "min_clearance_m": 0.0848889621341572, 
+            "penetration_count": 0, 
+            "point_name": "second_joint", 
+            "worst": {
+              "clearance_m": 0.0848889621341572, 
+              "frame_index": 208, 
+              "leg_id": 7, 
+              "leg_name": "TRH", 
+              "penetration_m": 0.0, 
+              "phase_name": "RF-6_StopAdjustment", 
+              "phase_step_index": 1, 
+              "point": "second_joint", 
+              "roll_index": 2, 
+              "z_m": 0.0848889621341572
+            }
+          }
+        }, 
+        "frame_count": 3, 
+        "ground_penetration_count": 0, 
+        "inter_leg_collision_count": 0, 
+        "inter_leg_near_count": 0, 
+        "joint_housing_collision_count": 0, 
+        "joint_housing_near_count": 0, 
+        "max_second_joint_deg": 72.06532654064529, 
+        "min_clearance_m": 0.009713708595537274, 
+        "min_inter_leg_distance_m": 0.2895424710773208, 
+        "min_joint_housing_distance_m": 0.30317968871391204, 
+        "phase_name": "RF-6_StopAdjustment", 
+        "second_joint_violation_count": 0
+      }
+    ], 
+    "second_joint_clearance": {
+      "max_penetration_depth_m": 0.0, 
+      "min_clearance_m": 0.04963730902448732, 
+      "penetration_count": 0, 
+      "point_name": "second_joint", 
+      "worst": {
+        "clearance_m": 0.04963730902448732, 
+        "frame_index": 212, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.0, 
+        "phase_name": "RF-1_Goal1_UpperLegPreSwing", 
+        "phase_step_index": 1, 
+        "point": "second_joint", 
+        "roll_index": 3, 
+        "z_m": 0.04963730902448732
+      }
+    }, 
+    "second_joint_limit_deg": 95.0, 
+    "second_joint_violation_count": 4, 
+    "top_ground_penetrations": [
+      {
+        "frame_index": 152, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640165125, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 8, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640165125
+      }, 
+      {
+        "frame_index": 144, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164903, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 0, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164903
+      }, 
+      {
+        "frame_index": 148, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164903, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 4, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164903
+      }, 
+      {
+        "frame_index": 156, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164903, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 12, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164903
+      }, 
+      {
+        "frame_index": 160, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164903, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 16, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164903
+      }, 
+      {
+        "frame_index": 164, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164903, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 20, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164903
+      }, 
+      {
+        "frame_index": 140, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164847, 
+        "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "phase_step_index": 0, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164847
+      }, 
+      {
+        "frame_index": 168, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "penetration_m": 0.012576622640164847, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 24, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164847
+      }, 
+      {
+        "frame_index": 144, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.012576622640164792, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 0, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164792
+      }, 
+      {
+        "frame_index": 156, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.012576622640164792, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 12, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164792
+      }, 
+      {
+        "frame_index": 160, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.012576622640164792, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 16, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164792
+      }, 
+      {
+        "frame_index": 168, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.012576622640164792, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 24, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164792
+      }, 
+      {
+        "frame_index": 140, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.012576622640164736, 
+        "phase_name": "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "phase_step_index": 0, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.012576622640164736
+      }, 
+      {
+        "frame_index": 148, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.01257662264016468, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 4, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.01257662264016468
+      }, 
+      {
+        "frame_index": 152, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.01257662264016468, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 8, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.01257662264016468
+      }, 
+      {
+        "frame_index": 164, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "penetration_m": 0.01257662264016468, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 20, 
+        "point": "foot", 
+        "roll_index": 2, 
+        "z_m": -0.01257662264016468
+      }, 
+      {
+        "frame_index": 80, 
+        "leg_id": 6, 
+        "leg_name": "TRF", 
+        "penetration_m": 0.01257662263788073, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 6, 
+        "point": "foot", 
+        "roll_index": 1, 
+        "z_m": -0.01257662263788073
+      }, 
+      {
+        "frame_index": 84, 
+        "leg_id": 6, 
+        "leg_name": "TRF", 
+        "penetration_m": 0.01257662263788073, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 10, 
+        "point": "foot", 
+        "roll_index": 1, 
+        "z_m": -0.01257662263788073
+      }, 
+      {
+        "frame_index": 92, 
+        "leg_id": 6, 
+        "leg_name": "TRF", 
+        "penetration_m": 0.01257662263788073, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 18, 
+        "point": "foot", 
+        "roll_index": 1, 
+        "z_m": -0.01257662263788073
+      }, 
+      {
+        "frame_index": 96, 
+        "leg_id": 6, 
+        "leg_name": "TRF", 
+        "penetration_m": 0.01257662263788073, 
+        "phase_name": "RF-2_Goal2_UpperLegLanding", 
+        "phase_step_index": 22, 
+        "point": "foot", 
+        "roll_index": 1, 
+        "z_m": -0.01257662263788073
+      }
+    ], 
+    "top_inter_leg_collisions": [], 
+    "top_inter_leg_joint_housing_collisions": [], 
+    "top_inter_leg_joint_housing_near": [], 
+    "top_inter_leg_near": [], 
+    "top_second_joint_violations": [
+      {
+        "abs_angle_deg": 95.17233930662375, 
+        "excess_deg": 0.17233930662375463, 
+        "frame_index": 176, 
+        "leg_id": 5, 
+        "leg_name": "TLH", 
+        "phase_name": "RF-4_Goal4_LandMiddlePair"
+      }, 
+      {
+        "abs_angle_deg": 95.17233930662375, 
+        "excess_deg": 0.17233930662375463, 
+        "frame_index": 176, 
+        "leg_id": 7, 
+        "leg_name": "TRH", 
+        "phase_name": "RF-4_Goal4_LandMiddlePair"
+      }, 
+      {
+        "abs_angle_deg": 95.01350538278584, 
+        "excess_deg": 0.013505382785828076, 
+        "frame_index": 36, 
+        "leg_id": 2, 
+        "leg_name": "BRF", 
+        "phase_name": "RF-4_Goal4_LandMiddlePair"
+      }, 
+      {
+        "abs_angle_deg": 95.01350538278584, 
+        "excess_deg": 0.013505382785828076, 
+        "frame_index": 36, 
+        "leg_id": 0, 
+        "leg_name": "BLF", 
+        "phase_name": "RF-4_Goal4_LandMiddlePair"
+      }
+    ], 
+    "worst_ground_clearance": {
+      "clearance_m": -0.012576622640165125, 
+      "frame_index": 152, 
+      "leg_id": 7, 
+      "leg_name": "TRH", 
+      "phase_name": "RF-2_Goal2_UpperLegLanding", 
+      "phase_step_index": 8, 
+      "point": "foot", 
+      "roll_index": 2, 
+      "z_m": -0.012576622640165125
+    }, 
+    "worst_inter_leg_distance": {
+      "clearance_margin_m": 0.10160573204205312, 
+      "collision_threshold_m": 0.03, 
+      "distance_m": 0.14160573204205312, 
+      "frame_index": 28, 
+      "leg_a_id": 0, 
+      "leg_a_name": "BLF", 
+      "leg_b_id": 4, 
+      "leg_b_name": "TLF", 
+      "link_a": "upper", 
+      "link_b": "upper", 
+      "phase_name": "RF-2_Goal2_UpperLegLanding", 
+      "phase_step_index": 24, 
+      "required_clearance_m": 0.04, 
+      "roll_index": 0
+    }, 
+    "worst_second_joint": {
+      "abs_angle_deg": 95.17233930662375, 
+      "abs_angle_rad": 1.6610706777258017, 
+      "frame_index": 176, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "leg_id": 5, 
+      "leg_name": "TLH", 
+      "phase_name": "RF-4_Goal4_LandMiddlePair"
+    }
+  }, 
+  "final_lily_posture": {
+    "pitch": 6.283185307179586, 
+    "roll": 0.0, 
+    "x": 1.6, 
+    "y": 0.0, 
+    "yaw": 0.0, 
+    "z": 0.4
+  }, 
+  "final_servo_deg_by_legacy_id": {
+    "0": [
+      33.204737437559764, 
+      -46.4890775902748, 
+      107.62926667301043
+    ], 
+    "1": [
+      110.3462638140418, 
+      -71.14024759954106, 
+      118.56240661949374
+    ], 
+    "2": [
+      -33.20473743755988, 
+      -46.489077590274846, 
+      107.62926667301048
+    ], 
+    "3": [
+      -110.3462638140418, 
+      -71.14024759954106, 
+      118.56240661949374
+    ], 
+    "4": [
+      0.0, 
+      -60.0, 
+      120.0
+    ], 
+    "5": [
+      27.326019895239494, 
+      7.062322711005214, 
+      75.85369339778289
+    ], 
+    "6": [
+      0.0, 
+      -60.00000000000001, 
+      120.0
+    ], 
+    "7": [
+      -27.326019895239508, 
+      7.062322711005214, 
+      75.85369339778289
+    ]
+  }, 
+  "frame_count": 280, 
+  "generation_error": null, 
+  "output_command_log": "testdata/provisional_baseline_v2/provisional_baseline_v2_raw_commands.jsonl", 
+  "parameters": {
+    "constraint_stride": 4, 
+    "goal2_dist_front": 0.4, 
+    "goal2_landing_z": 0.0, 
+    "goal2_pitch_scale": 0.9, 
+    "goal2_x_scale": 0.95, 
+    "goal3_lift_z": 0.05, 
+    "goal3_target_x": 0.2, 
+    "goal4_target_x": 0.05, 
+    "goal5_pitch_scale": 1.0, 
+    "goal5_x_scale": 1.0, 
+    "ground_tolerance": 0.0001, 
+    "include_initialize": false, 
+    "initialize_step": 100, 
+    "inter_leg_limit": 0.04, 
+    "legacy_body_z": 0.4, 
+    "max_step": 30, 
+    "move_dist": 0.4, 
+    "output_command_log": "testdata/provisional_baseline_v2/provisional_baseline_v2_raw_commands.jsonl", 
+    "report_output": "testdata/provisional_baseline_v2/provisional_baseline_v2_generation_report.json", 
+    "rf1_current_angle_anchor": true, 
+    "second_joint_abs_max_deg": 95.0, 
+    "skip_constraints": false, 
+    "support_dist": 0.77, 
+    "surface_sequence": "1,5,6,2,1"
+  }, 
+  "profile": "pure_legacy_repeated_roll", 
+  "quarter_roll_count": 4, 
+  "roll_summaries": [
+    {
+      "end_base_pose": {
+        "pitch": 1.5001104920891248, 
+        "roll": 0.0, 
+        "x": 0.39099999999999957, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "end_frame": 69, 
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "RF-1_Goal1_UpperLegPreSwing", 
+        "RF-2_Goal2_UpperLegLanding", 
+        "RF-3_Goal3_LiftMiddlePair", 
+        "RF-4_Goal4_LandMiddlePair", 
+        "RF-5_Goal5_MainBodyRoll", 
+        "RF-6_StopAdjustment"
+      ], 
+      "roll_index": 0, 
+      "start_frame": 0, 
+      "surface_after": 5, 
+      "surface_start": 1, 
+      "transition": "1->5"
+    }, 
+    {
+      "end_base_pose": {
+        "pitch": 3.0709068188840267, 
+        "roll": 0.0, 
+        "x": 0.7910000000000011, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "end_frame": 139, 
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "RF-1_Goal1_UpperLegPreSwing", 
+        "RF-2_Goal2_UpperLegLanding", 
+        "RF-3_Goal3_LiftMiddlePair", 
+        "RF-4_Goal4_LandMiddlePair", 
+        "RF-5_Goal5_MainBodyRoll", 
+        "RF-6_StopAdjustment"
+      ], 
+      "roll_index": 1, 
+      "start_frame": 70, 
+      "surface_after": 6, 
+      "surface_start": 5, 
+      "transition": "5->6"
+    }, 
+    {
+      "end_base_pose": {
+        "pitch": 4.64170314567892, 
+        "roll": 0.0, 
+        "x": 1.1909999999999974, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "end_frame": 209, 
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "RF-1_Goal1_UpperLegPreSwing", 
+        "RF-2_Goal2_UpperLegLanding", 
+        "RF-3_Goal3_LiftMiddlePair", 
+        "RF-4_Goal4_LandMiddlePair", 
+        "RF-5_Goal5_MainBodyRoll", 
+        "RF-6_StopAdjustment"
+      ], 
+      "roll_index": 2, 
+      "start_frame": 140, 
+      "surface_after": 2, 
+      "surface_start": 6, 
+      "transition": "6->2"
+    }, 
+    {
+      "end_base_pose": {
+        "pitch": 6.212499472473829, 
+        "roll": 0.0, 
+        "x": 1.590999999999997, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "end_frame": 279, 
+      "phases": [
+        "RF-1_Goal1_UpperLegPreSwing_CurrentAngleAnchor", 
+        "RF-1_Goal1_UpperLegPreSwing", 
+        "RF-2_Goal2_UpperLegLanding", 
+        "RF-3_Goal3_LiftMiddlePair", 
+        "RF-4_Goal4_LandMiddlePair", 
+        "RF-5_Goal5_MainBodyRoll", 
+        "RF-6_StopAdjustment"
+      ], 
+      "roll_index": 3, 
+      "start_frame": 210, 
+      "surface_after": 1, 
+      "surface_start": 2, 
+      "transition": "2->1"
+    }
+  ], 
+  "surface_sequence": [
+    1, 
+    5, 
+    6, 
+    2, 
+    1
+  ], 
+  "terminal_updates": [
+    {
+      "controller_pitch": 1.5707963267948966, 
+      "controller_x": 0.4, 
+      "frame_index_after_roll": 69, 
+      "lily_posture": {
+        "pitch": 1.5707963267948966, 
+        "roll": 0.0, 
+        "x": 0.4, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "roll_index": 0, 
+      "surface_after": 5, 
+      "surface_start": 1
+    }, 
+    {
+      "controller_pitch": 3.141592653589793, 
+      "controller_x": 0.8, 
+      "frame_index_after_roll": 139, 
+      "lily_posture": {
+        "pitch": 3.141592653589793, 
+        "roll": 0.0, 
+        "x": 0.8, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "roll_index": 1, 
+      "surface_after": 6, 
+      "surface_start": 5
+    }, 
+    {
+      "controller_pitch": 4.71238898038469, 
+      "controller_x": 1.2000000000000002, 
+      "frame_index_after_roll": 209, 
+      "lily_posture": {
+        "pitch": 4.71238898038469, 
+        "roll": 0.0, 
+        "x": 1.2000000000000002, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "roll_index": 2, 
+      "surface_after": 2, 
+      "surface_start": 6
+    }, 
+    {
+      "controller_pitch": 6.283185307179586, 
+      "controller_x": 1.6, 
+      "frame_index_after_roll": 279, 
+      "lily_posture": {
+        "pitch": 6.283185307179586, 
+        "roll": 0.0, 
+        "x": 1.6, 
+        "y": 0.0, 
+        "yaw": 0.0, 
+        "z": 0.4
+      }, 
+      "roll_index": 3, 
+      "surface_after": 1, 
+      "surface_start": 2
+    }
+  ], 
+  "version_note": "v3.0.36: RF-1 current-angle anchor; pure legacy repeated roll remains one emulator instance, cumulative controller_x/controller_pitch, no constrained parameterizer."
+}
