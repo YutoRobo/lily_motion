@@ -1,0 +1,26 @@
+{
+  "softlimit": {
+    "foot_min_clearance_m": -0.03017711684493357, 
+    "foot_penetration_count": 1986, 
+    "inter_leg_collision_count": 0, 
+    "inter_leg_joint_housing_collision_count": 0, 
+    "inter_leg_joint_housing_near_count": 0, 
+    "inter_leg_near_count": 0, 
+    "min_inter_leg_distance_m": 0.1380076385777231, 
+    "second_joint_min_clearance_m": 0.0669304010825203, 
+    "second_joint_penetration_count": 0, 
+    "second_joint_violation_count": 0
+  }, 
+  "source": {
+    "foot_min_clearance_m": -0.03017711684493357, 
+    "foot_penetration_count": 1986, 
+    "inter_leg_collision_count": 0, 
+    "inter_leg_joint_housing_collision_count": 0, 
+    "inter_leg_joint_housing_near_count": 0, 
+    "inter_leg_near_count": 0, 
+    "min_inter_leg_distance_m": 0.1380076385777231, 
+    "second_joint_min_clearance_m": 0.0669304010825203, 
+    "second_joint_penetration_count": 0, 
+    "second_joint_violation_count": 198
+  }
+}

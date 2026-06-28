@@ -1,0 +1,885 @@
+{
+  "command_sync_notes_after": [
+    "joint_command_deg and joint_command_rad were both present; modified samples were synchronized"
+  ], 
+  "command_sync_notes_before": [
+    "joint_command_deg and joint_command_rad were both present; modified samples were synchronized"
+  ], 
+  "envelope_candidate_sample_count": 308, 
+  "gazebo_replay_command": "python run_v3_0_gazebo_replay.py --command-log testdata/candidate02_softlimit/commands.jsonl --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log", 
+  "input": "data/reference_candidates/v3_0_42c_candidate_02_x8_sw40/commands.jsonl", 
+  "interval_count": 16, 
+  "intervals": [
+    {
+      "end_record_index": 295, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "legacy_leg_id": 2, 
+      "max_abs_angle_deg": 95.9015761364986, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 280
+    }, 
+    {
+      "end_record_index": 309, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "legacy_leg_id": 2, 
+      "max_abs_angle_deg": 95.91206465310987, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 296
+    }, 
+    {
+      "end_record_index": 295, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "legacy_leg_id": 0, 
+      "max_abs_angle_deg": 95.9015761364986, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 280
+    }, 
+    {
+      "end_record_index": 309, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "legacy_leg_id": 0, 
+      "max_abs_angle_deg": 95.91206465310987, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 296
+    }, 
+    {
+      "end_record_index": 1975, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 7, 
+      "leg_name": "BLH", 
+      "legacy_leg_id": 1, 
+      "max_abs_angle_deg": 95.96185009230679, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 1963
+    }, 
+    {
+      "end_record_index": 1990, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 7, 
+      "leg_name": "BLH", 
+      "legacy_leg_id": 1, 
+      "max_abs_angle_deg": 95.97432281767091, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 1976
+    }, 
+    {
+      "end_record_index": 1975, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 10, 
+      "leg_name": "BRH", 
+      "legacy_leg_id": 3, 
+      "max_abs_angle_deg": 95.96185009230676, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 1963
+    }, 
+    {
+      "end_record_index": 1990, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 10, 
+      "leg_name": "BRH", 
+      "legacy_leg_id": 3, 
+      "max_abs_angle_deg": 95.9743228176709, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 1976
+    }, 
+    {
+      "end_record_index": 855, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 13, 
+      "leg_name": "TRF", 
+      "legacy_leg_id": 6, 
+      "max_abs_angle_deg": 95.96185009230695, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 843
+    }, 
+    {
+      "end_record_index": 870, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 13, 
+      "leg_name": "TRF", 
+      "legacy_leg_id": 6, 
+      "max_abs_angle_deg": 95.97432281767107, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 856
+    }, 
+    {
+      "end_record_index": 855, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 16, 
+      "leg_name": "TLF", 
+      "legacy_leg_id": 4, 
+      "max_abs_angle_deg": 95.96185009230695, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 843
+    }, 
+    {
+      "end_record_index": 870, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 16, 
+      "leg_name": "TLF", 
+      "legacy_leg_id": 4, 
+      "max_abs_angle_deg": 95.97432281767107, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 856
+    }, 
+    {
+      "end_record_index": 1415, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 19, 
+      "leg_name": "TLH", 
+      "legacy_leg_id": 5, 
+      "max_abs_angle_deg": 95.96185008183619, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 1403
+    }, 
+    {
+      "end_record_index": 1430, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 19, 
+      "leg_name": "TLH", 
+      "legacy_leg_id": 5, 
+      "max_abs_angle_deg": 95.9743228071458, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 1416
+    }, 
+    {
+      "end_record_index": 1415, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 22, 
+      "leg_name": "TRH", 
+      "legacy_leg_id": 7, 
+      "max_abs_angle_deg": 95.96185008183622, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "start_record_index": 1403
+    }, 
+    {
+      "end_record_index": 1430, 
+      "joint_index": 1, 
+      "joint_name": "thigh", 
+      "joint_state_index": 22, 
+      "leg_name": "TRH", 
+      "legacy_leg_id": 7, 
+      "max_abs_angle_deg": 95.97432280714581, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "start_record_index": 1416
+    }
+  ], 
+  "joint_selection": {
+    "joint_index": 1, 
+    "joint_name": "thigh", 
+    "joint_state_indices": [
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 1, 
+        "leg_name": "BRF", 
+        "legacy_leg_id": 2
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 4, 
+        "leg_name": "BLF", 
+        "legacy_leg_id": 0
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 7, 
+        "leg_name": "BLH", 
+        "legacy_leg_id": 1
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 10, 
+        "leg_name": "BRH", 
+        "legacy_leg_id": 3
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 13, 
+        "leg_name": "TRF", 
+        "legacy_leg_id": 6
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 16, 
+        "leg_name": "TLF", 
+        "legacy_leg_id": 4
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 19, 
+        "leg_name": "TLH", 
+        "legacy_leg_id": 5
+      }, 
+      {
+        "joint_index": 1, 
+        "joint_name": "thigh", 
+        "joint_state_index": 22, 
+        "leg_name": "TRH", 
+        "legacy_leg_id": 7
+      }
+    ], 
+    "source": "lily_motion_v3.interface_config.JOINT_STATE_ORDER"
+  }, 
+  "max_abs_correction_deg": 1.1743228176710687, 
+  "max_adjacent_delta_after_deg": 5.56001875294519, 
+  "max_adjacent_delta_after_worst": {
+    "joint_state_index": 14, 
+    "record_index": 21, 
+    "value": 5.56001875294519
+  }, 
+  "max_adjacent_delta_before_deg": 5.56001875294519, 
+  "max_adjacent_delta_before_worst": {
+    "joint_state_index": 14, 
+    "record_index": 21, 
+    "value": 5.56001875294519
+  }, 
+  "max_second_diff_after_deg": 3.787713927320219, 
+  "max_second_diff_after_worst": {
+    "joint_state_index": 14, 
+    "record_index": 20, 
+    "value": 3.787713927320219
+  }, 
+  "max_second_diff_before_deg": 3.787713927320219, 
+  "max_second_diff_before_worst": {
+    "joint_state_index": 14, 
+    "record_index": 20, 
+    "value": 3.787713927320219
+  }, 
+  "modified_frame_count": 154, 
+  "modified_leg_names": [
+    "BLF", 
+    "BLH", 
+    "BRF", 
+    "BRH", 
+    "TLF", 
+    "TLH", 
+    "TRF", 
+    "TRH"
+  ], 
+  "modified_phase_names": [
+    "RF-4_Goal4_LandMiddlePair", 
+    "RF-5_Goal5_MainBodyRoll"
+  ], 
+  "modified_sample_count": 308, 
+  "modified_samples_preview": [
+    {
+      "correction_deg": -0.005536880043173653, 
+      "frame_index": 34, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.34881900739205, 
+      "old_angle_deg": -94.35435588743522, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 275, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.005536880043173653, 
+      "frame_index": 34, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.34881900739205, 
+      "old_angle_deg": -94.35435588743522, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 275, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.011073760086347306, 
+      "frame_index": 34, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.44521642197077, 
+      "old_angle_deg": -94.45629018205712, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 276, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.011073760086347306, 
+      "frame_index": 34, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.44521642197077, 
+      "old_angle_deg": -94.45629018205712, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 276, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.01661064012952096, 
+      "frame_index": 34, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.53766715555503, 
+      "old_angle_deg": -94.55427779568454, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 277, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.01661064012952096, 
+      "frame_index": 34, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.53766715555503, 
+      "old_angle_deg": -94.55427779568454, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 277, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.022147520172694612, 
+      "frame_index": 34, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.62761466308795, 
+      "old_angle_deg": -94.64976218326065, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 278, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.022147520172694612, 
+      "frame_index": 34, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.62761466308795, 
+      "old_angle_deg": -94.64976218326065, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 278, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.027684400215868266, 
+      "frame_index": 34, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.71505894456962, 
+      "old_angle_deg": -94.7427433447855, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 279, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.027684400215868266, 
+      "frame_index": 34, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.71505894456962, 
+      "old_angle_deg": -94.7427433447855, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 279, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.03322128025904192, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -94.83322128025904, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 280, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.03322128025904192, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -94.83322128025904, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 280, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.12119598968128287, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -94.92119598968128, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 281, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.12119598968128287, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -94.92119598968128, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 281, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.2066674730522351, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.00666747305223, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 282, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.2066674730522351, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.00666747305223, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 282, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.2896357303718844, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.08963573037188, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 283, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.2896357303718844, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.08963573037188, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 283, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.3701007616402592, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.17010076164026, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 284, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.3701007616402592, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.17010076164026, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 284, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.4479729254696423, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.24797292546964, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 285, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.4479729254696423, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.24797292546964, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 285, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.5245370210200662, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.32453702102006, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 286, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.5245370210200662, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.32453702102006, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 286, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.599793048291545, 
+      "frame_index": 35, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.39979304829154, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 287, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.599793048291545, 
+      "frame_index": 35, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.39979304829154, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 287, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.6737410072840788, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.47374100728408, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 288, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.6737410072840788, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.47374100728408, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 288, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.7463808979976534, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.54638089799765, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 289, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.7463808979976534, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.54638089799765, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 289, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.8177127204322687, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.61771272043227, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 290, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.8177127204322687, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.61771272043227, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 290, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.887736474587939, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.68773647458794, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 291, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.887736474587939, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.68773647458794, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 291, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.9564521604646785, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.75645216046468, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 292, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -0.9564521604646785, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.75645216046468, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 292, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.0237698901759842, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.82376989017598, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 293, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.0237698901759842, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.82376989017598, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 293, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.07214454885397, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.87214454885397, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 294, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.07214454885397, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.87214454885397, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 294, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.1015761364986076, 
+      "frame_index": 36, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.9015761364986, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 295, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.1015761364986076, 
+      "frame_index": 36, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.9015761364986, 
+      "phase_name": "RF-4_Goal4_LandMiddlePair", 
+      "record_index": 295, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.1120646531098686, 
+      "frame_index": 37, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.91206465310987, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 296, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.1120646531098686, 
+      "frame_index": 37, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.91206465310987, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 296, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.1036100986877955, 
+      "frame_index": 37, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.90361009868779, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 297, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.1036100986877955, 
+      "frame_index": 37, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.90361009868779, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 297, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.0762124732323741, 
+      "frame_index": 37, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.87621247323237, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 298, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.0762124732323741, 
+      "frame_index": 37, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.87621247323237, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 298, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.0298717767436472, 
+      "frame_index": 37, 
+      "joint_state_index": 1, 
+      "leg_name": "BRF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.82987177674364, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 299, 
+      "roll_index": 0
+    }, 
+    {
+      "correction_deg": -1.0298717767436472, 
+      "frame_index": 37, 
+      "joint_state_index": 4, 
+      "leg_name": "BLF", 
+      "new_angle_deg": -94.8, 
+      "old_angle_deg": -95.82987177674364, 
+      "phase_name": "RF-5_Goal5_MainBodyRoll", 
+      "record_index": 299, 
+      "roll_index": 0
+    }
+  ], 
+  "output_command_log": "testdata/candidate02_softlimit/commands.jsonl", 
+  "second_joint_max_after_deg": 94.8, 
+  "second_joint_max_before_deg": 95.97432281767107, 
+  "second_joint_worst_after": {
+    "abs_angle_deg": 94.8, 
+    "angle_deg": -94.8, 
+    "frame_index": 35, 
+    "joint_index": 1, 
+    "joint_name": "thigh", 
+    "joint_state_index": 1, 
+    "leg_name": "BRF", 
+    "legacy_leg_id": 2, 
+    "phase_name": "RF-4_Goal4_LandMiddlePair", 
+    "record_index": 280, 
+    "roll_index": 0
+  }, 
+  "second_joint_worst_before": {
+    "abs_angle_deg": 95.97432281767107, 
+    "angle_deg": -95.97432281767107, 
+    "frame_index": 107, 
+    "joint_index": 1, 
+    "joint_name": "thigh", 
+    "joint_state_index": 13, 
+    "leg_name": "TRF", 
+    "legacy_leg_id": 6, 
+    "phase_name": "RF-5_Goal5_MainBodyRoll", 
+    "record_index": 856, 
+    "roll_index": 1
+  }, 
+  "soft_limit_deg": 94.8, 
+  "taper_radius": 5, 
+  "target_phases": [
+    "RF-4_Goal4_LandMiddlePair", 
+    "RF-5_Goal5_MainBodyRoll"
+  ], 
+  "violation_count_after": 0, 
+  "violation_count_before": 198, 
+  "violation_limit_deg": 95.0, 
+  "warnings": []
+}
