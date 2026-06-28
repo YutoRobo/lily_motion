@@ -1,10 +1,12 @@
-## v3.0.42c candidate_02 x8 sw40 Gazebo replay
+## v3.0.42c candidate_02 Gazebo replay / second joint angle issue
 
 ### Input
 
 data/reference_candidates/v3_0_42c_candidate_02_x8_sw40/commands.jsonl
 
-### Replay command
+### Replay / evaluation
+
+Example replay command:
 
 ```bash
 python run_v3_0_42e_effort_replay_plot.py \
@@ -17,30 +19,17 @@ python run_v3_0_42e_effort_replay_plot.py \
   --effort-limit 40 \
   --output testdata/v3_0_42e_effort_candidate_02_rate5.json \
   --plot-dir testdata/v3_0_42e_effort_candidate_02_rate5_plots
+```
 
-## v3.0.42c candidate_02 x8 sw40 evaluation
+### Result
 
-### Input
+- Gazebo replay completed normally.
+- second_joint_max_deg: 95.97432281767107
+- second_joint_violation_count: 198
+- The violation is concentrated in RF-4_Goal4_LandMiddlePair and RF-5_Goal5_MainBodyRoll.
+- candidate_02 is not accepted as a baseline because the second joint exceeds 95 deg.
 
-data/reference_candidates/v3_0_42c_candidate_02_x8_sw40/commands.jsonl
-
-### Gazebo replay
-
-Replay command:
-
-```bash
-python run_v3_0_42e_effort_replay_plot.py \
-  --command-log testdata/v3_0_42c_candidates/candidate_02_x8_sw40_commands.jsonl \
-  --strict-command-log-input \
-  --rate 5 \
-  --hold-start-sec 2.0 \
-  --hold-end-sec 2.0 \
-  --diagnose-command-log \
-  --effort-limit 40 \
-  --output testdata/v3_0_42e_effort_candidate_02_rate5.json \
-  --plot-dir testdata/v3_0_42e_effort_candidate_02_rate5_plots
-
-## candidate02_softlimit_94p8 evaluation
+## candidate02_softlimit_94p8 generation and validation
 
 ### Branch
 
@@ -170,3 +159,13 @@ Do not block candidate02_softlimit_94p8 adoption as the next provisional baselin
 
 Treat swing-foot penetration, second-joint penetration, inter-leg collision, housing collision, and Gazebo visual failure as hard gates.
 Treat support-foot proxy penetration as a monitored metric.
+
+## candidate02_softlimit_94p8 provisional baseline decision
+
+### Decision
+
+candidate02_softlimit_94p8 is the current provisional baseline candidate.
+
+It is selected because Gazebo replay completed normally, second_joint_max_deg is capped at 94.8, second_joint_violation_count is 0, max adjacent delta and max second difference did not worsen from candidate_02, and inter-leg / housing collision metrics are zero.
+
+It is not a final baseline yet because it is produced by a joint-space postprocess and support-foot-only proxy penetration remains monitored.

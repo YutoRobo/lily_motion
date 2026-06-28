@@ -57,6 +57,16 @@ Floor/contact and inter-leg collision metrics are unchanged.
 - preview_frame_count: 2233
 - first_invalid_frame: null
 
+## Provisional baseline candidate status
+
+- Gazebo replay completed normally.
+- second joint max is capped at 94.8 deg.
+- second joint violation count is 0.
+- max adjacent delta and max second difference did not worsen from candidate_02.
+- inter-leg collision / near and joint-housing collision / near are 0.
+- remaining foot penetration is unchanged from source candidate_02 and is support-foot-only proxy penetration.
+- not final baseline yet because it is produced by a joint-space postprocess and support-foot proxy penetration remains monitored.
+
 ## Decision
 
 Use this as the next reference candidate.
