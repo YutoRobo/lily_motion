@@ -38,3 +38,4 @@ plot/
 # Editor
 .vscode/
 *.swp
+external/can_interface/
