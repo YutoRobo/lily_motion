@@ -1,6 +1,6 @@
 # Lily CAN Interface
 
-This directory is the maintained execution target for the Lily hardware CAN UI and StateMachine.
+This directory is the only maintained execution target for the Lily hardware CAN UI and StateMachine. Do not run the legacy snapshot under `external/`.
 
 ## Entry Points
 
@@ -34,4 +34,4 @@ The maintained execution copy includes the Lily safety patches:
 
 ## external/ Policy
 
-`external/can_interface/260102_usb_can_fast_alignment/` is kept as the imported-source archive / legacy reference location. New execution, testing, and operational instructions should refer to this `tools/can_interface/` copy.
+`external/can_interface/260102_usb_can_fast_alignment/` is kept only as a legacy snapshot / pre-relocation reference. New execution, testing, and operational instructions must refer to this `tools/can_interface/` copy.
