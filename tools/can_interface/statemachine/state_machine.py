@@ -42,8 +42,8 @@ class StateMachine(object):
     UI仕様に合わせた StateMachine
 
     Subscribe:
-      - /ui/leg_command (String)    ex) "align:3", "home_move:3:-1", "set_home:3", "home_step:0.002", "run"
-      - /cmdForJetson (JointState)  位置指令（RUN中のみ垂れ流し）
+      - /ui/leg_command (String)    ex) "use:3:1", "align:3", "home_move:3:-1", "set_home:3", "home_step:0.002", "run", "stop"
+      - /cmdForJetson (JointState)  24要素位置指令（RUN中、Use=True軸のみ送信）
 
     Publish:
       - /ui/leg_status (String)     ex) "3,Connected"
@@ -54,6 +54,9 @@ class StateMachine(object):
 
         # 脚テーブル
         self.legs = [LegInfo(i) for i in range(NUM_LEGS)]
+
+        # UI Use=True の制御対象軸。RUN gate/CAN送信はこの集合だけを見る。
+        self.active_joints = set()
 
         # RUNモード
         self.is_run = False
@@ -104,20 +107,21 @@ class StateMachine(object):
         self._send_can_message(can_id, [0] * 8)
 
     def send_run_start_command(self):
-        # run start: 0x600 + i
-        rospy.loginfo("[CAN] Run start broadcast (ID=0x600+i)")
-        for i in range(NUM_LEGS):
+        # run start: 0x600 + active joint id
+        active = self._active_joint_ids()
+        rospy.loginfo("[CAN] Run start active_joints=%s", active)
+        for i in active:
             self._send_can_message(0x600 + i, [0] * 8)
 
-    def send_position_command_all(self, positions):
+    def send_position_command_active(self, positions):
         """
-        positions: list/tuple length >= NUM_LEGS
-        send: 0x400+i, payload: [0,0,0,0] + float32(pos[i])
+        positions: list/tuple length == NUM_LEGS
+        send: 0x400+i, payload: [0,0,0,0] + float32(pos[i]) only for active_joints
         """
-        if positions is None or len(positions) < NUM_LEGS:
-            rospy.logwarn("[CAN] Position command none (ID=0x400+i)")
+        if positions is None or len(positions) != NUM_LEGS:
+            rospy.logwarn("[CAN] Position command length invalid (ID=0x400+i)")
             return
-        for i in range(NUM_LEGS):
+        for i in self._active_joint_ids():
             can_id = 0x400 + i
             data = [0, 0, 0, 0] + self.encode_float_to_bytes(positions[i])
             self._send_can_message(can_id, data)
@@ -137,11 +141,13 @@ class StateMachine(object):
     def ui_command_callback(self, msg):
         """
         /ui/leg_command: String
+          - "use:<leg>:0" or "use:<leg>:1"
           - "align:<leg>"
           - "home_move:<leg>:-1" or "home_move:<leg>:+1"
           - "set_home:<leg>"
           - "home_step:<float>"
           - "run"
+          - "stop"
         """
         s = msg.data.strip()
         if not s:
@@ -155,6 +161,22 @@ class StateMachine(object):
         # STOP
         if s == "stop":
             self.handle_stop_request("ui_stop")
+            return
+
+        # use:<leg>:0|1
+        if s.startswith("use:"):
+            parts = s.split(":")
+            if len(parts) != 3:
+                rospy.logwarn("[UI] invalid use command: %s", s)
+                return
+            try:
+                leg_id = int(parts[1])
+                active = self._parse_active_flag(parts[2])
+            except:
+                rospy.logwarn("[UI] invalid use params: %s", s)
+                return
+            if 0 <= leg_id < NUM_LEGS:
+                self.handle_use_selection(leg_id, active)
             return
 
         # home_step
@@ -176,6 +198,9 @@ class StateMachine(object):
                 rospy.logwarn("[UI] invalid align command: %s", s)
                 return
             if 0 <= leg_id < NUM_LEGS:
+                if not self._is_active(leg_id):
+                    rospy.logwarn("[ALIGN] leg=%d is Use=False -> ignore align", leg_id)
+                    return
                 self.send_alignment_request(leg_id)
             return
 
@@ -211,6 +236,34 @@ class StateMachine(object):
 
         rospy.logwarn("[UI] unknown command: %s", s)
 
+    def _parse_active_flag(self, s):
+        v = s.strip().lower()
+        if v in ("1", "true", "on", "yes"):
+            return True
+        if v in ("0", "false", "off", "no"):
+            return False
+        raise ValueError("invalid active flag")
+
+    def handle_use_selection(self, leg_id, active):
+        if active:
+            self.active_joints.add(leg_id)
+            rospy.loginfo("[UI] Use=True leg=%d active_joints=%s", leg_id, self._active_joint_ids())
+        else:
+            if leg_id in self.active_joints:
+                self.active_joints.remove(leg_id)
+            rospy.loginfo("[UI] Use=False leg=%d active_joints=%s", leg_id, self._active_joint_ids())
+            if self.is_run and not self.active_joints:
+                self.handle_stop_request("active_joints_empty")
+
+    def _active_joint_ids(self):
+        return sorted([i for i in self.active_joints if 0 <= i < NUM_LEGS])
+
+    def _inactive_joint_ids(self):
+        active = set(self._active_joint_ids())
+        return [i for i in range(NUM_LEGS) if i not in active]
+
+    def _is_active(self, leg_id):
+        return leg_id in self.active_joints
 
     def _publish_all_leg_status(self):
         for leg in self.legs:
@@ -218,7 +271,11 @@ class StateMachine(object):
 
     def _run_blocking_reasons(self):
         reasons = []
-        for leg in self.legs:
+        active = self._active_joint_ids()
+        if not active:
+            return ["no_active_joints"]
+        for leg_id in active:
+            leg = self.legs[leg_id]
             missing = []
             if not leg.connected:
                 missing.append("connected")
@@ -238,7 +295,7 @@ class StateMachine(object):
             self._publish_all_leg_status()
             return False
         self.is_run = True
-        rospy.loginfo("[UI] RUN accepted -> is_run=True")
+        rospy.loginfo("[UI] RUN accepted active_joints=%s -> is_run=True", self._active_joint_ids())
         self.send_run_start_command()
         self._publish_all_leg_status()
         return True
@@ -253,11 +310,11 @@ class StateMachine(object):
         return True
 
     def _position_limit_violation(self, positions):
-        for i, value in enumerate(positions):
+        for i in self._active_joint_ids():
             joint_index = i % 3
             lo, hi = JOINT_LIMITS_RAD[joint_index]
             try:
-                v = float(value)
+                v = float(positions[i])
             except Exception:
                 return "position[%d] is not numeric" % i
             if v < lo or v > hi:
@@ -265,16 +322,35 @@ class StateMachine(object):
                     i, JOINT_NAMES[joint_index], v, lo, hi)
         return None
 
+    def _inactive_position_limit_warnings(self, positions):
+        warnings = []
+        for i in self._inactive_joint_ids():
+            joint_index = i % 3
+            lo, hi = JOINT_LIMITS_RAD[joint_index]
+            try:
+                v = float(positions[i])
+            except Exception:
+                warnings.append("position[%d] inactive non-numeric" % i)
+                continue
+            if v < lo or v > hi:
+                warnings.append("position[%d] inactive %s %.6f rad outside [%.6f, %.6f]" % (
+                    i, JOINT_NAMES[joint_index], v, lo, hi))
+        return warnings
+
     # =========================================================
     # Home operations
     # =========================================================
     def handle_home_move(self, leg_id, direction):
         """
-        Aligned状態の脚はすべて◀▶操作できる
+        Use=TrueかつAligned状態の脚だけ◀▶操作できる
         direction: -1 or +1
         送る値は位置指令と同じ float（絶対値）
         """
         leg = self.legs[leg_id]
+
+        if not self._is_active(leg_id):
+            rospy.logwarn("[HOME] leg=%d is Use=False -> ignore home_move", leg_id)
+            return
 
         if not leg.aligned:
             rospy.logwarn("[HOME] leg=%d is not Aligned -> ignore home_move", leg_id)
@@ -285,6 +361,9 @@ class StateMachine(object):
 
     def handle_set_home(self, leg_id):
         leg = self.legs[leg_id]
+        if not self._is_active(leg_id):
+            rospy.logwarn("[HOME] leg=%d is Use=False -> ignore set_home", leg_id)
+            return
         if not leg.aligned:
             rospy.logwarn("[HOME] leg=%d is not Aligned -> ignore set_home", leg_id)
             return
@@ -299,7 +378,7 @@ class StateMachine(object):
     def coordinate_callback(self, msg):
         """
         /cmdForJetson (JointState)
-        RUN中は全脚に垂れ流し送信（Aligned成否に依存しない）
+        RUN中はUse=Trueのactive_jointsだけに送信する。positionは従来通り24要素必須。
         """
         if not self.is_run:
             return
@@ -310,11 +389,17 @@ class StateMachine(object):
         if len(pos) != NUM_LEGS:
             rospy.logwarn("[RUN] position length=%d != %d -> ignore", len(pos), NUM_LEGS)
             return
+        if not self._active_joint_ids():
+            rospy.logwarn("[RUN] active_joints is empty -> ignore position")
+            return
         violation = self._position_limit_violation(pos)
         if violation:
             rospy.logerr("[RUN] hardware_limit_v2 reject: %s", violation)
             return
-        self.send_position_command_all(pos)
+        inactive_warnings = self._inactive_position_limit_warnings(pos)
+        if inactive_warnings:
+            rospy.logwarn("[RUN] inactive joint values outside hardware_limit_v2 ignored: %s", ";".join(inactive_warnings[:8]))
+        self.send_position_command_active(pos)
 
     # =========================================================
     # CAN receive
@@ -392,14 +477,14 @@ class StateMachine(object):
         for leg in self.legs:
             if leg.connected and (now - leg.last_seen) > CONNECT_TIMEOUT_SEC:
                 rospy.logwarn("[CONN] leg=%d timeout -> Disconnected", leg.leg_id)
+                was_active = self._is_active(leg.leg_id)
                 leg.connected = False
                 leg.aligned = False
                 leg.homed = False
                 leg.home_pos = 0.0
                 self.set_leg_state(leg.leg_id, "Disconnected")
-                if self.is_run:
-                    self.handle_stop_request("connection_timeout_leg_%d" % leg.leg_id)
+                if self.is_run and was_active:
+                    self.handle_stop_request("active_connection_timeout_leg_%d" % leg.leg_id)
 
         # Periodically republish state for UI recovery.
         self._publish_all_leg_status()
-

@@ -140,16 +140,21 @@ class LegControlUI(object):
         prev = leg.state
         leg.state = state
 
-        # 切断時は強制OFF
+        # 切断時は強制OFFし、StateMachine側のactive selectionも落とす
         if state == "Disconnected":
-            leg.use = False
-            self.widgets[leg_id]["use_var"].set(0)
+            if leg.use:
+                leg.use = False
+                self.widgets[leg_id]["use_var"].set(0)
+                self.publish_use_state(leg_id)
+            else:
+                self.widgets[leg_id]["use_var"].set(0)
             return
 
-        # Disconnected -> 何か の瞬間は自動ON
+        # Disconnected -> 何か の瞬間は自動ONし、StateMachineへUse=Trueを通知
         if prev == "Disconnected":
             leg.use = True
             self.widgets[leg_id]["use_var"].set(1)
+            self.publish_use_state(leg_id)
 
     # ===============================
     # Use操作（ユーザーが管理）
@@ -157,6 +162,11 @@ class LegControlUI(object):
     def user_toggle_use(self, leg_id):
         var = self.widgets[leg_id]["use_var"]
         self.legs[leg_id].use = bool(var.get())
+        self.publish_use_state(leg_id)
+
+    def publish_use_state(self, leg_id):
+        active = 1 if self.legs[leg_id].use else 0
+        self.pub_cmd.publish("use:{}:{}".format(leg_id, active))
 
     # ===============================
     # 長押し：原点微動（◀▶）
