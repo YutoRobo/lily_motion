@@ -118,3 +118,47 @@ Result:
 Decision:
 
 candidate02_softlimit_94p8 is confirmed as the current provisional baseline candidate.
+
+## Current Provisional Baseline under hardware_limit_v2
+
+Current provisional baseline candidate:
+
+```text
+data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl
+```
+
+This candidate is treated as the current provisional baseline under `hardware_limit_v2`.
+
+### hardware_limit_v2 result
+
+| Item                                                     |                Result |
+| -------------------------------------------------------- | --------------------: |
+| hard joint limit violation                               |                     0 |
+| base_clause range                                        | -224.96 .. 224.96 deg |
+| thigh range                                              |     -94.8 .. 94.8 deg |
+| tibia range                                              | -130.03 .. 130.42 deg |
+| base soft margin violation, `abs(base_clause) > 330 deg` |                     0 |
+| base soft margin violation, `abs(base_clause) > 340 deg` |                     0 |
+| second_joint violation                                   |                     0 |
+| second_joint minimum clearance                           |             0.06693 m |
+| inter-leg collision                                      |                     0 |
+| housing collision                                        |                     0 |
+
+### Status
+
+`candidate02_softlimit_94p8` passes the hardware_limit_v2 hard gate.
+
+It remains a Gazebo-feasible reference and is restored as the current provisional baseline candidate under hardware_limit_v2.
+
+### Remaining monitored issue
+
+The existing foot proxy clearance evaluator reports:
+
+```text
+foot_penetration_count = 1986
+foot_min_clearance_m ≈ -0.03018
+```
+
+This is currently treated as a monitored metric, not as a hard gate failure, because previous localization indicates that it is mainly a support-foot proxy penetration issue rather than a swing-foot floor penetration issue.
+
+This point should remain visible in reports, but it does not block provisional baseline status at this stage.

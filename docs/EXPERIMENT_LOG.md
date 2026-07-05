@@ -169,3 +169,87 @@ candidate02_softlimit_94p8 is the current provisional baseline candidate.
 It is selected because Gazebo replay completed normally, second_joint_max_deg is capped at 94.8, second_joint_violation_count is 0, max adjacent delta and max second difference did not worsen from candidate_02, and inter-leg / housing collision metrics are zero.
 
 It is not a final baseline yet because it is produced by a joint-space postprocess and support-foot-only proxy penetration remains monitored.
+
+## hardware_limit_v2 recheck and base_clause ±180 investigation
+
+### Background
+
+Earlier diagnostics treated base_clause ±180 deg as a hard hardware limit.
+Under that assumption, `candidate02_softlimit_94p8` appeared to violate the base_clause limit.
+
+However, later mechanical review clarified the actual structural joint ranges:
+
+```text
+base_clause: ±360 deg
+thigh:       ±95 deg
+tibia:       ±150 deg
+```
+
+The thigh joint may mechanically approach ±100 deg at the limit, but ±95 deg remains the normal hard gate.
+
+### Original repo runtime check
+
+The original repo `roll(Direction.FORWARD)` was executed four times without publishing to hardware or Gazebo. The execution surface sequence was:
+
+```text
+1,5,6,2,1
+```
+
+The runtime check showed:
+
+```text
+roll trace frames: 276
+base servo range: [-380, 380] deg
+internal IK angle exceeds ±180 deg: yes
+servo target angle exceeds ±180 deg: yes
+publish angle exceeds ±180 deg: yes
+```
+
+Representative publish angle ranges:
+
+```text
+TLF base_clause: -243.6683 .. 44.2951 deg
+TRF base_clause: -44.2951 .. 243.6683 deg
+base_clause violation count under old ±180 assumption: 154
+all-joint violation count under old assumptions: 592
+```
+
+Therefore, the original roll program was not designed under a base_clause ±180 deg hardware assumption. The old ±180 diagnostic is retained only as historical context.
+
+The uploaded original `lily_controller.py` also shows that the roll sequence repeatedly uses `support_solve_type=[-1,...]` and `lending_leg_type=[-1,-1]`, with no explicit base_clause ±180 deg clamp in the roll sequence.
+
+### hardware_limit_v2 recheck
+
+Target:
+
+```text
+data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl
+```
+
+Output:
+
+```text
+testdata/hardware_limit_v2_recheck/
+```
+
+Result:
+
+```text
+hard violation: 0
+base soft margin violation >330/340 deg: 0
+base_clause: -224.96 .. 224.96 deg
+thigh: -94.8 .. 94.8 deg
+tibia: -130.03 .. 130.42 deg
+second_joint violation: 0
+second_joint minimum clearance: 0.06693 m
+inter-leg collision: 0
+housing collision: 0
+```
+
+The candidate passes hardware_limit_v2 hard gates.
+
+### Conclusion
+
+`candidate02_softlimit_94p8` is restored as the current provisional baseline candidate under hardware_limit_v2.
+
+The remaining foot proxy penetration metric is monitored, but it is not treated as a hard gate failure at this stage.
