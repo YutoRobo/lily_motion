@@ -45,3 +45,12 @@ The maintained execution copy includes the Lily safety patches:
 ## external/ Policy
 
 `external/can_interface/260102_usb_can_fast_alignment/` is kept only as a legacy snapshot / pre-relocation reference. New execution, testing, and operational instructions must refer to this `tools/can_interface/` copy.
+
+## Hardware Operation Docs
+
+Before any hardware trial, read:
+
+- `docs/HARDWARE_PRETEST_STATUS.md`
+- `docs/HARDWARE_OPERATION_PROCEDURE.md`
+
+These documents define the current pretest status, execution path, Use=True semantics, staged hardware procedure, and explicit prohibitions.
