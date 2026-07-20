@@ -1,0 +1,84 @@
+{
+  "can0_opened": false, 
+  "candidate_name": "v3_0_44_candidate_022_wide_urdf0p075", 
+  "checksum_sha256": "e60c9de63287c5c198e78e11c1da89475b2293e6de45950cf09f5f2c170304a5", 
+  "command_count": 2233, 
+  "gazebo_full_roll_result": "PASS", 
+  "gazebo_urdf_worst_1144_1184_result": "initial_blow_up_observed_not_reproduced", 
+  "generated_at": "2026-07-20T16:42:11Z", 
+  "hardware_can_sent": false, 
+  "source_candidate": "testdata/visual_near_contact_local_fix_candidate/candidate_022_wide", 
+  "source_commit": "178be686111962e3cf2741e47e495c8966bbe888", 
+  "staged_logs": [
+    {
+      "checksum_sha256": "b0baaed0509a7978e9dd6239eefa8e26e7dcd361df905afec15d69b718141db8", 
+      "end_line_index": 134, 
+      "line_count": 135, 
+      "name": "air_entry_and_hold_only", 
+      "path": "data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/air_entry_and_hold_only_commands.jsonl", 
+      "source_command_end_line_index": null, 
+      "source_command_start_line_index": null, 
+      "start_line_index": 0
+    }, 
+    {
+      "checksum_sha256": "313fb022dfc9ea4c6082bcc27d91b7538fbdeaa3859b4e16147080728c18917c", 
+      "end_line_index": 2367, 
+      "line_count": 2368, 
+      "name": "combined_with_hold", 
+      "path": "data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/combined_with_hold_commands.jsonl", 
+      "source_command_end_line_index": null, 
+      "source_command_start_line_index": null, 
+      "start_line_index": 0
+    }, 
+    {
+      "checksum_sha256": "994880a34aec30bc8e4ddf3f3eca9b5c864421012a0dde5a5390dcc5ed47074a", 
+      "end_line_index": 49, 
+      "line_count": 50, 
+      "name": "roll_0_50", 
+      "path": "data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_0_50_commands.jsonl", 
+      "source_command_end_line_index": 49, 
+      "source_command_start_line_index": 0, 
+      "start_line_index": 0
+    }, 
+    {
+      "checksum_sha256": "359c4acbaf96fc018865d2edf6048f899f7b4a35aa48c5ad204406f6e240d29e", 
+      "end_line_index": 99, 
+      "line_count": 50, 
+      "name": "roll_50_100", 
+      "path": "data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_50_100_commands.jsonl", 
+      "source_command_end_line_index": 99, 
+      "source_command_start_line_index": 50, 
+      "start_line_index": 50
+    }, 
+    {
+      "checksum_sha256": "8bc862b7323373f84449db78e5be0bbae958d79c839ee0f5c84fc95603b68217", 
+      "end_line_index": 299, 
+      "line_count": 200, 
+      "name": "roll_100_300", 
+      "path": "data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_100_300_commands.jsonl", 
+      "source_command_end_line_index": 299, 
+      "source_command_start_line_index": 100, 
+      "start_line_index": 100
+    }, 
+    {
+      "checksum_sha256": "69c37107d78487f43e436054d3a80b6e904f44d9314e7e08e3444701ec93bf6b", 
+      "end_line_index": 2232, 
+      "line_count": 1933, 
+      "name": "roll_300_end", 
+      "path": "data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_300_end_commands.jsonl", 
+      "source_command_end_line_index": 2232, 
+      "source_command_start_line_index": 300, 
+      "start_line_index": 300
+    }
+  ], 
+  "strict_command_log_input_dry_run": {
+    "can0_opened": false, 
+    "command": "python tools/gazebo/run_v3_0_gazebo_replay.py --dry-run --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/commands.jsonl --strict-command-log-input --rate 15 --hold-start-sec 0.0 --hold-end-sec 0.0 --repeat-last 0 --diagnose-command-log", 
+    "first_invalid_frame": null, 
+    "hardware_can_sent": false, 
+    "preview_frame_count": 2233, 
+    "published_count": 4466, 
+    "replaying_existing_command_log": true, 
+    "result": "PASS"
+  }
+}

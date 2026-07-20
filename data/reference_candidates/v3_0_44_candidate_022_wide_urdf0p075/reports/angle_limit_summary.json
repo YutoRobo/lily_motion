@@ -1,0 +1,12 @@
+{
+  "max_adjacent_delta_deg": 5.560018752945189, 
+  "max_second_joint_deg": 94.8, 
+  "note": "0.075 re-eval reports no second-joint limit violation; full geometry adoption uses URDF FK evaluator as source of truth.", 
+  "result": "PASS", 
+  "second_joint_limit_deg": 95.0, 
+  "second_joint_violation_count": 0, 
+  "source_files": [
+    "testdata/kinematics_0p075_re_eval/candidate_022_wide/constraint_eval_0p075.json", 
+    "testdata/kinematics_0p075_re_eval/candidate_022_wide/command_diagnostics.json"
+  ]
+}

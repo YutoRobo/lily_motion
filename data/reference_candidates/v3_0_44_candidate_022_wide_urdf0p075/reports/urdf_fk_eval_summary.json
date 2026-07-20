@@ -1,0 +1,27 @@
+{
+  "can0_opened": false, 
+  "command_log": "testdata/visual_near_contact_local_fix_candidate/candidate_022_wide/commands.jsonl", 
+  "frame_count": 2233, 
+  "hardware_can_sent": false, 
+  "label": "candidate_022_wide", 
+  "min_clearance": {
+    "frame_index": 145, 
+    "leg_a": "TLF", 
+    "leg_b": "BLF", 
+    "line_index": 1164, 
+    "min_clearance_m": 0.019648551564994537, 
+    "phase_name": "RF-2_Goal2_UpperLegLanding", 
+    "raw_distance_m": 0.09964855156499454, 
+    "roll_index": 2, 
+    "segment_a": "coxa_end_to_knee", 
+    "segment_b": "coxa_end_to_knee"
+  }, 
+  "min_foot_z": {
+    "frame_index": 27, 
+    "line_index": 223, 
+    "min_foot_z_m": -0.003903081895751448, 
+    "phase_name": "RF-2_Goal2_UpperLegLanding", 
+    "roll_index": 0
+  }, 
+  "stale_note": "Older primitive results based on default_octpus_mounts fallback FK are stale for hardware geometry decisions."
+}

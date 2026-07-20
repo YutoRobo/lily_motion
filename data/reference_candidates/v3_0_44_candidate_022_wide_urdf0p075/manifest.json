@@ -1,0 +1,55 @@
+{
+  "angle_gate_result": {
+    "max_adjacent_delta_deg": 5.560018752945189, 
+    "max_second_joint_deg": 94.8, 
+    "note": "0.075 re-eval reports no second-joint limit violation; full geometry adoption uses URDF FK evaluator as source of truth.", 
+    "result": "PASS", 
+    "second_joint_limit_deg": 95.0, 
+    "second_joint_violation_count": 0, 
+    "source_files": [
+      "testdata/kinematics_0p075_re_eval/candidate_022_wide/constraint_eval_0p075.json", 
+      "testdata/kinematics_0p075_re_eval/candidate_022_wide/command_diagnostics.json"
+    ]
+  }, 
+  "candidate_name": "v3_0_44_candidate_022_wide_urdf0p075", 
+  "checksum_sha256": "e60c9de63287c5c198e78e11c1da89475b2293e6de45950cf09f5f2c170304a5", 
+  "command_count": 2233, 
+  "coxa_length": 0.075, 
+  "fk_source_of_truth": "URDF", 
+  "gazebo_full_roll_result": "PASS", 
+  "generated_at": "2026-07-20T16:42:11Z", 
+  "hardware_status": "not_tested", 
+  "known_notes": [
+    "full_roll normal Gazebo review is the primary adoption basis.", 
+    "urdf_worst_1144_1184 initial blow-up was observed once but not reproduced; it is not a rejection reason.", 
+    "URDF FK evaluator is the source of truth for 0.075 geometry decisions.", 
+    "Older Python fallback FK primitive reports are stale.", 
+    "Do not start hardware with full_roll; start with staged/air_entry_and_hold_only_commands.jsonl."
+  ], 
+  "old_python_fallback_fk_status": "stale", 
+  "safety_state": {
+    "can0_opened": false, 
+    "external_can_interface_executed": false, 
+    "hardware_can_sent": false, 
+    "publish_cmdforjetson_jsonl_modified": false, 
+    "tools_can_interface_modified": false
+  }, 
+  "source_candidate": "testdata/visual_near_contact_local_fix_candidate/candidate_022_wide", 
+  "source_commit": "178be686111962e3cf2741e47e495c8966bbe888", 
+  "strict_command_log_input_dry_run_result": "PASS", 
+  "thigh_length": 0.3, 
+  "tibia_length": 0.3, 
+  "urdf_fk_min_clearance": {
+    "frame_index": 145, 
+    "leg_a": "TLF", 
+    "leg_b": "BLF", 
+    "line_index": 1164, 
+    "min_clearance_m": 0.019648551564994537, 
+    "phase_name": "RF-2_Goal2_UpperLegLanding", 
+    "raw_distance_m": 0.09964855156499454, 
+    "roll_index": 2, 
+    "segment_a": "coxa_end_to_knee", 
+    "segment_b": "coxa_end_to_knee"
+  }, 
+  "urdf_source": "testdata/body_root_transform_geometry_check/robot_description_from_ros.xml"
+}
