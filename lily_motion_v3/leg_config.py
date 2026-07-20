@@ -3,6 +3,8 @@
 from __future__ import division
 import math
 
+from lily_motion_v3.robot_geometry import COXA_LENGTH, THIGH_LENGTH, TIBIA_LENGTH
+
 
 class LegKinematicConfig(object):
     """Length and joint-limit configuration for one insect-style 3-DOF leg.
@@ -12,11 +14,11 @@ class LegKinematicConfig(object):
       q1: thigh pitch in the yaw-selected vertical plane
       q2: tibia pitch relative to thigh
 
-    The default lengths follow the legacy log observation [0, 0.05, 0.3, 0.3]
-    but are explicit project configuration rather than a hidden legacy dependency.
+    The default lengths follow the current URDF geometry, with the first/coxa
+    link corrected to 0.075 m.
     """
 
-    def __init__(self, coxa_length=0.05, thigh_length=0.3, tibia_length=0.3,
+    def __init__(self, coxa_length=COXA_LENGTH, thigh_length=THIGH_LENGTH, tibia_length=TIBIA_LENGTH,
                  second_joint_abs_max_deg=95.0,
                  joint_abs_max_deg=None):
         self.coxa_length = float(coxa_length)

@@ -63,6 +63,34 @@ class TestV30Kinematics(unittest.TestCase):
             self.assertIsNotNone(d["contact_state"])
 
 
+class TestV30LinkLength075Defaults(unittest.TestCase):
+    def test_project_contained_default_coxa_length_is_0p075(self):
+        cfg = LegKinematicConfig()
+        self.assertAlmostEqual(cfg.coxa_length, 0.075)
+        self.assertAlmostEqual(cfg.thigh_length, 0.3)
+        self.assertAlmostEqual(cfg.tibia_length, 0.3)
+
+    def test_legacy_state_machine_default_link_lengths_are_0p075(self):
+        from lily_motion_v3.legacy_state_machine_emulator import LegacyStateMachineConfig, LegacyStateMachineEmulator
+        cfg = LegacyStateMachineConfig()
+        self.assertEqual(cfg.link_lengths, (0.0, 0.075, 0.3, 0.3))
+        emu = LegacyStateMachineEmulator(cfg)
+        for leg_obj in emu.legs_by_legacy_id.values():
+            self.assertEqual(tuple(getattr(leg_obj, '_Leg__L')), (0.0, 0.075, 0.3, 0.3))
+
+    def test_fk_ik_round_trip_with_explicit_0p075_config(self):
+        cfg = LegKinematicConfig(coxa_length=0.075, thigh_length=0.3, tibia_length=0.3)
+        kin = LegKinematics(cfg)
+        q = [0.25, -0.35, 0.9]
+        p = kin.forward_kinematics(q)
+        selected = kin.select_candidate(kin.inverse_kinematics_candidates(p), previous_q=q)
+        self.assertIsNotNone(selected)
+        p2 = kin.forward_kinematics(selected.q)
+        self.assertEqual(len(p), len(p2))
+        for a, b in zip(p, p2):
+            self.assertAlmostEqual(a, b, places=6)
+
+
 if __name__ == "__main__":
     unittest.main()
 

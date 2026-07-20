@@ -24,6 +24,7 @@ from lily_motion_v3.legacy_runtime.end_efector_manager import EndEfectorManager
 from lily_motion_v3.legacy_runtime.lily_robot import LilyRobot
 from lily_motion_v3.legacy_runtime.util import Posture
 from lily_motion_v3.interface_config import JOINT_STATE_ORDER, LEG_NAMES_BY_ID
+from lily_motion_v3.robot_geometry import LINK_LENGTHS
 
 LEGACY_ID_TO_NAME = {0:"BLF",1:"BLH",2:"BRF",3:"BRH",4:"TLF",5:"TLH",6:"TRF",7:"TRH"}
 LEGACY_NAME_TO_ID = dict((v,k) for k,v in LEGACY_ID_TO_NAME.items())
@@ -43,7 +44,8 @@ class LegacyStateMachineConfig(object):
                  middle_swing_y_escape_apply_rf3=False,
                  middle_swing_y_escape_apply_rf4=False,
                  goal5_x_scale=1.0, goal5_pitch_scale=1.0,
-                 rf1_current_angle_anchor=False):
+                 rf1_current_angle_anchor=False,
+                 link_lengths=LINK_LENGTHS):
         self.move_dist = float(move_dist)
         self.support_dist = float(support_dist)
         self.max_step = int(max_step)
@@ -78,6 +80,9 @@ class LegacyStateMachineConfig(object):
         # boundaries and does not preblend the previous roll.  It only makes
         # RF-1 begin from the actual terminal servo state.
         self.rf1_current_angle_anchor = bool(rf1_current_angle_anchor)
+        if len(link_lengths) != 4:
+            raise ValueError("link_lengths must be a 4-item legacy vector: [unused, coxa, thigh, tibia]")
+        self.link_lengths = tuple(float(v) for v in link_lengths)
 
 
 class LegacyStateMachineEmulator(object):
@@ -123,7 +128,7 @@ class LegacyStateMachineEmulator(object):
         ss[2].setDegreeRange(-DEGREE_RANGE3, DEGREE_RANGE3)
         lg = legacy_leg.Leg(*ss)
         lg.setLegType(leg_name)
-        lg.setLinkLength([0, 0.05, 0.3, 0.3])
+        lg.setLinkLength(list(self.config.link_lengths))
         return ss, lg, EndEfectorManager(lg)
 
     def initialize(self, record=False):

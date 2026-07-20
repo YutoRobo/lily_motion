@@ -336,6 +336,7 @@ run_stage \
 echo
 echo "Mandatory visual check after roll frames 0-50:"
 echo "- Confirm first-quarter RF2/RF3-region near-contact clearance, no abnormal contact, no unexpected posture jump, and STOP behavior."
+echo "- Hardware roll is prohibited if Gazebo visual near-contact is observed, even when the primitive scan reports ok."
 echo "- Continue only if the operator accepts the observed posture and motion."
 
 run_stage \
