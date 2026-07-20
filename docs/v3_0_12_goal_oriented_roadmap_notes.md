@@ -51,7 +51,7 @@ v3-native search stalls.
 Target future interface:
 
 ```bash
-python run_v3_0_whole_roll_eval.py --profile legacy_style \
+python tools/diagnostics/run_v3_0_whole_roll_eval.py --profile legacy_style \
   --step-scale 1.5 \
   --splited-num 10 \
   --rf2-pitch-scale 1.0 \
@@ -66,6 +66,6 @@ main design loop.
 
 ## v3.0.12 addition
 
-`run_v3_0_goal_oriented_sweep.py` runs a staged search with explicit roadmap
+`tools/diagnostics/run_v3_0_goal_oriented_sweep.py` runs a staged search with explicit roadmap
 metadata and richer failure ranking. It can sweep body-roll pitch angles as well
 as the existing contact/gait/filter parameters.

@@ -14,3 +14,9 @@
 - testdata/entry_touchdown_roll_sequence/
 - docs/HARDWARE_OPERATION_PROCEDURE.md
 - docs/HARDWARE_PRETEST_STATUS.md
+
+# Archive
+
+Files under `archive/` are retained for historical reference, reproducibility, and old experiment review.
+
+Scripts under `archive/v3_experiment_scripts/` are not part of the current pre-hardware operation path and must not be used for current hardware execution. Use maintained runtime tools under `tools/` instead.

@@ -10,8 +10,8 @@ v3.0.6では、プロジェクト内完結のv3候補フレームを、既存Gaz
 
 ```text
 lily_motion_v3/gazebo_export.py
-run_v3_0_export_commands.py
-run_v3_0_gazebo_replay.py
+tools/command_generation/run_v3_0_export_commands.py
+tools/gazebo/run_v3_0_gazebo_replay.py
 docs/v3_0_6_gazebo_export_replay_notes.md
 ```
 
@@ -31,7 +31,7 @@ v3 leg name -> existing Gazebo joint topic order
 ## ROSなしでコマンド列だけ確認
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --output testdata/v3_0_6_preview_commands.jsonl
 ```
 
@@ -40,7 +40,7 @@ python run_v3_0_export_commands.py \
 最初の異常frameも含めたい場合：
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --include-invalid-frame \
   --output testdata/v3_0_6_preview_with_invalid.jsonl
 ```
@@ -48,7 +48,7 @@ python run_v3_0_export_commands.py \
 全部出したい場合：
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --allow-invalid-frames \
   --output testdata/v3_0_6_all_commands.jsonl
 ```
@@ -58,7 +58,7 @@ python run_v3_0_export_commands.py \
 Gazeboを別端末で起動したうえで実行する。
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 30 \
   --command-log testdata/v3_0_6_gazebo_preview_commands.jsonl \
   --candidate-output testdata/v3_0_6_candidate.json \
@@ -68,7 +68,7 @@ python run_v3_0_gazebo_replay.py \
 既定では破綻直前で止める。最初の異常frameまで見たい場合：
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --include-invalid-frame \
   --rate 30
 ```
@@ -76,7 +76,7 @@ python run_v3_0_gazebo_replay.py \
 全frameを流すこともできるが、現段階では推奨しない。
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --allow-invalid-frames \
   --rate 30
 ```
@@ -86,7 +86,7 @@ python run_v3_0_gazebo_replay.py \
 ROSなしでreplay scriptの変換だけ確認する場合：
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --dry-run \
   --command-log testdata/v3_0_6_dryrun_commands.jsonl
 ```

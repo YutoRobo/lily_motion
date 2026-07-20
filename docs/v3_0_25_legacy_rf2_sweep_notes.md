@@ -23,7 +23,7 @@ These are diagnostic knobs. They are not yet a final gait design.
 ## Basic evaluation
 
 ```bash
-python run_v3_0_legacy_constraint_eval.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_constraint_eval.py \
   --surface-id 1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -40,7 +40,7 @@ python run_v3_0_legacy_constraint_eval.py \
 The evaluator uses the vendored legacy FK and is intentionally heavy. Start with a small sweep.
 
 ```bash
-python run_v3_0_legacy_rf2_sweep.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_rf2_sweep.py \
   --goal2-dist-fronts 0.30,0.40 \
   --goal2-x-scales 0.8,1.0 \
   --goal2-pitch-scales 0.8,1.0 \
@@ -53,13 +53,13 @@ python run_v3_0_legacy_rf2_sweep.py \
 ## Gazebo check
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_25_rf2_best_commands.jsonl \
   --resample-factor 4 \
   --smooth-window 3 \
   --output testdata/v3_0_25_rf2_best_commands_resampled.jsonl
 
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 60 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 2.0 \

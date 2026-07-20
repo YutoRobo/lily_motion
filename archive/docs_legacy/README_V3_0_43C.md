@@ -11,14 +11,14 @@ baseline v2 at lift-off -> outward Y apex during RF-3 -> baseline v2 at RF-4 lan
 The baseline v2 trajectory is not overwritten.  You can regenerate it at any time with:
 
 ```bash
-python run_v3_0_provisional_baseline_v2.py \
+python archive/v3_experiment_scripts/run_v3_0_provisional_baseline_v2.py \
   --output-dir testdata/provisional_baseline_v2
 ```
 
 Gazebo replay for the regenerated baseline v2:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --command-log testdata/provisional_baseline_v2/provisional_baseline_v2_x8_sw40_commands.jsonl \
   --strict-command-log-input \
   --rate 15 \
@@ -30,7 +30,7 @@ python run_v3_0_gazebo_replay.py \
 ## Main sweep command
 
 ```bash
-python run_v3_0_43c_middle_swing_y_bump_sweep.py \
+python archive/v3_experiment_scripts/run_v3_0_43c_middle_swing_y_bump_sweep.py \
   --middle-swing-y-escapes 0.00,0.05,0.10,0.15,0.20 \
   --middle-swing-y-escape-modes outward \
   --middle-swing-y-escape-phases rf3_only \
@@ -59,7 +59,7 @@ The package may include `testdata/v3_0_43c_single/` with these command logs:
 Replay example:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --command-log testdata/v3_0_43c_single/E010_x8_sw40_commands.jsonl \
   --strict-command-log-input \
   --rate 15 \

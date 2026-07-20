@@ -21,7 +21,7 @@ The visualizer helps inspect whether the candidate is actually rolling, which le
 ## Command
 
 ```bash
-python run_v3_0_visualize_roll.py \
+python tools/diagnostics/run_v3_0_visualize_roll.py \
   --contact-plan-variant front_pair_roll \
   --steps-per-phase 6 \
   --lift-height 0.12 \

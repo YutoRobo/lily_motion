@@ -38,7 +38,7 @@ v3.0.12 までの結果から、連続パラメータを小さく振るだけで
 ## 新規スクリプト
 
 ```bash
-python run_v3_0_contact_plan_catalog.py \
+python tools/diagnostics/run_v3_0_contact_plan_catalog.py \
   --output testdata/v3_0_13_contact_plan_catalog.json
 ```
 
@@ -46,12 +46,12 @@ python run_v3_0_contact_plan_catalog.py \
 
 ## goal-oriented sweep の更新
 
-`run_v3_0_goal_oriented_sweep.py` の quick / broad でも、新しい接触計画を候補に含めるようにした。
+`tools/diagnostics/run_v3_0_goal_oriented_sweep.py` の quick / broad でも、新しい接触計画を候補に含めるようにした。
 
 quick:
 
 ```bash
-python run_v3_0_goal_oriented_sweep.py \
+python tools/diagnostics/run_v3_0_goal_oriented_sweep.py \
   --mode quick \
   --output testdata/v3_0_13_goal_oriented_quick.json
 ```
@@ -59,7 +59,7 @@ python run_v3_0_goal_oriented_sweep.py \
 catalog:
 
 ```bash
-python run_v3_0_contact_plan_catalog.py \
+python tools/diagnostics/run_v3_0_contact_plan_catalog.py \
   --steps-per-phase 6 \
   --filter-window 3 \
   --body-roll-pitch-deg 90 \

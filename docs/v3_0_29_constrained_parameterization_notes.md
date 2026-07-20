@@ -25,7 +25,7 @@ connection.
 Example:
 
 ```bash
-python run_v3_0_constrained_roll_sweep.py \
+python archive/v3_experiment_scripts/run_v3_0_constrained_roll_sweep.py \
   --support-dists 0.72,0.74,0.76 \
   --legacy-body-zs 0.38,0.40,0.42 \
   --pitch-profiles legacy,balanced,late_roll \
@@ -42,13 +42,13 @@ python run_v3_0_constrained_roll_sweep.py \
 Gazebo check:
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_29_constrained_best_commands.jsonl \
   --resample-factor 8 \
   --smooth-window 3 \
   --output testdata/v3_0_29_constrained_best_resampled_x8.jsonl
 
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 10 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 3.0 \

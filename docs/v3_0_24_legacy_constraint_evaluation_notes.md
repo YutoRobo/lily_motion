@@ -17,7 +17,7 @@ Evaluated items:
 Generate and evaluate in one step:
 
 ```bash
-python run_v3_0_legacy_constraint_eval.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_constraint_eval.py \
   --surface-id 1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -32,7 +32,7 @@ python run_v3_0_legacy_constraint_eval.py \
 Evaluate an existing command log:
 
 ```bash
-python run_v3_0_legacy_constraint_eval.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_constraint_eval.py \
   --command-log testdata/v3_0_23_legacy_state_machine_commands.jsonl \
   --second-joint-abs-max-deg 95 \
   --inter-leg-limit 0.04 \
@@ -42,7 +42,7 @@ python run_v3_0_legacy_constraint_eval.py \
 Evaluate a Gazebo-preview-smoothed command log:
 
 ```bash
-python run_v3_0_legacy_constraint_eval.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_constraint_eval.py \
   --command-log testdata/v3_0_23_legacy_state_machine_commands.jsonl \
   --resample-factor 4 \
   --smooth-window 3 \
@@ -58,7 +58,7 @@ The evaluator can also write the command log for Gazebo replay.  After generatin
 `testdata/v3_0_24_legacy_resampled_sw3.jsonl`, replay with:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 60 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 2.0 \

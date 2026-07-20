@@ -92,11 +92,11 @@ For each category it reports:
 Use:
 
 ```bash
-python run_v3_0_diagnose_failures.py
+python tools/diagnostics/run_v3_0_diagnose_failures.py
 ```
 
 or inspect `whole_roll_evaluation.failure_diagnosis` from
-`run_v3_0_whole_roll_eval.py`.
+`tools/diagnostics/run_v3_0_whole_roll_eval.py`.
 
 ## Recommended next stages
 

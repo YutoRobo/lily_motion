@@ -16,14 +16,14 @@ No ROS/catkin package is imported by this generator.
 
 ## Important replay fix
 
-Earlier guidance used `run_v3_0_gazebo_replay.py --command-log <file>` as if `--command-log` were an input. In v3.0.21 it was actually an output path when generating a native candidate. This could accidentally replay the wrong generated candidate.
+Earlier guidance used `tools/gazebo/run_v3_0_gazebo_replay.py --command-log <file>` as if `--command-log` were an input. In v3.0.21 it was actually an output path when generating a native candidate. This could accidentally replay the wrong generated candidate.
 
 In v3.0.22, if `--command-log` points to an existing JSONL containing `joint_command_rad`, replay uses it as the input command log.
 
 ## Generate legacy-state-machine commands
 
 ```bash
-python run_v3_0_legacy_state_machine_replay.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_state_machine_replay.py \
   --surface-id 1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -35,7 +35,7 @@ python run_v3_0_legacy_state_machine_replay.py \
 To include the initialization transition in the replay:
 
 ```bash
-python run_v3_0_legacy_state_machine_replay.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_state_machine_replay.py \
   --include-initialize \
   --initialize-step 100 \
   --output testdata/v3_0_22_legacy_state_machine_with_init_commands.jsonl
@@ -44,14 +44,14 @@ python run_v3_0_legacy_state_machine_replay.py \
 ## Diagnose command amplitude
 
 ```bash
-python run_v3_0_command_diagnostics.py \
+python tools/diagnostics/run_v3_0_command_diagnostics.py \
   --command-log testdata/v3_0_22_legacy_state_machine_commands.jsonl
 ```
 
 ## Gazebo dry-run
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --dry-run \
   --command-log testdata/v3_0_22_legacy_state_machine_commands.jsonl \
   --frame-hold-sec 0.25 \
@@ -63,7 +63,7 @@ python run_v3_0_gazebo_replay.py \
 ## Gazebo replay
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 20 \
   --frame-hold-sec 0.25 \
   --hold-start-sec 2.0 \

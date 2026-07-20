@@ -5,7 +5,7 @@
 v3.0.18:
   * supports both v3-native and legacy-style profiles;
   * supports raw or filtered command export;
-  * remains ROS-free; replay is handled by run_v3_0_gazebo_replay.py.
+  * remains ROS-free; replay is handled by tools/gazebo/run_v3_0_gazebo_replay.py.
 """
 from __future__ import print_function
 import argparse
@@ -14,7 +14,7 @@ import math
 import os
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 

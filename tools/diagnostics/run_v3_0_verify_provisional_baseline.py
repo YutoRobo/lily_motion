@@ -10,13 +10,16 @@ import os
 import subprocess
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from lily_motion_v3.command_resampler import load_command_records, full_command_diagnostics
 from lily_motion_v3.interface_config import JOINT_STATE_ORDER, LEG_NAMES_BY_ID
 from lily_motion_v3.legacy_constraint_evaluator import LegacyConstraintEvaluator
+ARCHIVE_SCRIPT_DIR = os.path.join(ROOT, "archive", "v3_experiment_scripts")
+if ARCHIVE_SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, ARCHIVE_SCRIPT_DIR)
 from run_v3_0_41_second_joint_angle_localization import _analyze_source
 
 
@@ -185,7 +188,7 @@ def _run_gazebo(args, output_dir):
     out_path = os.path.join(output_dir, "gazebo_replay_candidate.json")
     cmd = [
         sys.executable,
-        os.path.join(ROOT, "run_v3_0_gazebo_replay.py"),
+        os.path.join(ROOT, "tools", "gazebo", "run_v3_0_gazebo_replay.py"),
         "--command-log", args.command_log,
         "--strict-command-log-input",
         "--rate", str(args.rate),

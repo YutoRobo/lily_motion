@@ -29,7 +29,7 @@ Known limitations:
 ## Evaluate
 
 ```bash
-python run_v3_0_legacy_roll_spec_eval.py --summary-only \
+python archive/v3_experiment_scripts/run_v3_0_legacy_roll_spec_eval.py --summary-only \
   --surface-id 1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -40,7 +40,7 @@ python run_v3_0_legacy_roll_spec_eval.py --summary-only \
 ## Export for Gazebo
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --profile legacy_roll_spec \
   --surface-id 1 \
   --move-dist 0.4 \
@@ -54,7 +54,7 @@ python run_v3_0_export_commands.py \
 The first spec-level candidate can be marked invalid at frame 0 by the portable v3 geometry checker because the v3 model is not the exact legacy symbolic leg model.  To visually inspect the full current command sequence in Gazebo, export all frames:
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --profile legacy_roll_spec \
   --surface-id 1 \
   --move-dist 0.4 \
@@ -69,7 +69,7 @@ python run_v3_0_export_commands.py \
 ## Replay in Gazebo
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 20 \
   --frame-hold-sec 0.25 \
   --hold-start-sec 2.0 \

@@ -23,16 +23,16 @@ The following are not required by v3 evaluation/sweep scripts:
 
 Entry points that do not require ROS/Gazebo:
 
-- `run_v3_0_whole_roll_eval.py`
-- `run_v3_0_parameter_sweep.py`
-- `run_v3_0_goal_oriented_sweep.py`
-- `run_v3_0_contact_plan_catalog.py`
-- `run_v3_0_diagnose_failures.py`
-- `run_v3_0_export_commands.py`
+- `tools/diagnostics/run_v3_0_whole_roll_eval.py`
+- `tools/diagnostics/run_v3_0_parameter_sweep.py`
+- `tools/diagnostics/run_v3_0_goal_oriented_sweep.py`
+- `tools/diagnostics/run_v3_0_contact_plan_catalog.py`
+- `tools/diagnostics/run_v3_0_diagnose_failures.py`
+- `tools/command_generation/run_v3_0_export_commands.py`
 
 ## Optional ROS/Gazebo dependency
 
-`run_v3_0_gazebo_replay.py` requires ROS/Gazebo only when not using `--dry-run`.
+`tools/gazebo/run_v3_0_gazebo_replay.py` requires ROS/Gazebo only when not using `--dry-run`.
 It imports the self-contained `lily_motion_v3.ros_bridge` module, not the older
 `lily_motion` package.
 

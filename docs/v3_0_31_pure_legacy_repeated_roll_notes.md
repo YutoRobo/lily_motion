@@ -21,7 +21,7 @@ This is not an optimization version. It is a migration/debug version.
 Run
 ---
 
-python run_v3_0_pure_legacy_repeated_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_pure_legacy_repeated_roll.py \
   --surface-sequence 1,5,6,2,1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -37,13 +37,13 @@ vendored legacy IK can be slow under Python 3/SymPy for repeated rolls.
 Gazebo preview
 --------------
 
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_31_pure_legacy_repeated_commands.jsonl \
   --resample-factor 8 \
   --smooth-window 3 \
   --output testdata/v3_0_31_pure_legacy_repeated_resampled_x8.jsonl
 
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 10 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 3.0 \

@@ -23,7 +23,7 @@ old algorithm.
 ## Evaluate
 
 ```bash
-python run_v3_0_legacy_style_eval.py \
+python tools/diagnostics/run_v3_0_legacy_style_eval.py \
   --summary-only \
   --step-scale 1.5 \
   --splited-num 10 \
@@ -35,7 +35,7 @@ python run_v3_0_legacy_style_eval.py \
 ## Export for Gazebo
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --profile legacy_style \
   --step-scale 1.5 \
   --splited-num 10 \
@@ -49,7 +49,7 @@ python run_v3_0_export_commands.py \
 Then dry-run:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --dry-run \
   --command-log testdata/v3_0_19_legacy_rf_filtered_commands.jsonl \
   --frame-hold-sec 0.25 \
@@ -60,7 +60,7 @@ python run_v3_0_gazebo_replay.py \
 Gazebo replay:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 20 \
   --frame-hold-sec 0.25 \
   --hold-start-sec 2.0 \

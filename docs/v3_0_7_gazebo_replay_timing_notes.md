@@ -26,7 +26,7 @@ For the current 33-frame preview, this yields about 6.3 seconds of playback.
 Example:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 30 \
   --frame-hold-sec 0.20 \
   --hold-start-sec 2.0 \
@@ -38,7 +38,7 @@ python run_v3_0_gazebo_replay.py \
 For timing-only check without ROS:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --dry-run \
   --dry-run-sleep \
   --frame-hold-sec 0.20

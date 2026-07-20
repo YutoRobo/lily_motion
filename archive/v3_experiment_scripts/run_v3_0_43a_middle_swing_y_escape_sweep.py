@@ -16,7 +16,7 @@ Design rule:
   pre-v3.0.43A command sequence.
 
 Recommended first pass:
-  python run_v3_0_43a_middle_swing_y_escape_sweep.py \
+  python archive/v3_experiment_scripts/run_v3_0_43a_middle_swing_y_escape_sweep.py \
     --middle-swing-y-escapes 0.00,0.01,0.02,0.03,0.04 \
     --middle-swing-y-escape-modes outward \
     --middle-swing-y-escape-phases rf3_rf4
@@ -37,7 +37,7 @@ except ImportError:
     from pipes import quote as _shell_quote
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -635,7 +635,7 @@ def main():
                 'constraint_filtered': item.get('constraint_filtered'),
                 'raw_command_log': raw_path,
                 'filtered_command_log': filt_path,
-                'gazebo_replay_command': 'python run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filt_path,
+                'gazebo_replay_command': 'python tools/gazebo/run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filt_path,
             }
             with open(meta_path, 'w') as f:
                 json.dump(meta, f, indent=2, sort_keys=True)

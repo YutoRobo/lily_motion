@@ -26,7 +26,7 @@ Current Gazebo preview is still a **visual diagnosis step**, not a success demo.
 Export:
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --profile native \
   --contact-plan-variant front_pair_roll \
   --steps-per-phase 6 \
@@ -42,7 +42,7 @@ python run_v3_0_export_commands.py \
 Dry-run replay:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --dry-run \
   --command-log testdata/v3_0_18_native_filtered_commands.jsonl \
   --frame-hold-sec 0.25 \
@@ -53,7 +53,7 @@ python run_v3_0_gazebo_replay.py \
 Gazebo replay after starting Gazebo:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 20 \
   --frame-hold-sec 0.25 \
   --hold-start-sec 2.0 \
@@ -68,7 +68,7 @@ python run_v3_0_gazebo_replay.py \
 Export:
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --profile legacy_style \
   --step-scale 1.5 \
   --splited-num 10 \
@@ -82,7 +82,7 @@ python run_v3_0_export_commands.py \
 Dry-run replay:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --dry-run \
   --command-log testdata/v3_0_18_legacy_style_filtered_commands.jsonl \
   --frame-hold-sec 0.25 \
@@ -93,7 +93,7 @@ python run_v3_0_gazebo_replay.py \
 Gazebo replay after starting Gazebo:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 20 \
   --frame-hold-sec 0.25 \
   --hold-start-sec 2.0 \

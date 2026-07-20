@@ -17,7 +17,7 @@ Updated files:
 - `lily_motion_v3/leg_kinematics.py`
 - `lily_motion_v3/robot_model.py`
 - `lily_motion_v3/v3_roll_candidate_generator.py`
-- `run_v3_0_concept_roll.py`
+- `archive/v3_experiment_scripts/run_v3_0_concept_roll.py`
 - `tests/test_v3_0_kinematics.py`
 
 ## Main additions
@@ -83,13 +83,13 @@ This remains a first-stage geometric screening, not exact Gazebo collision geome
 ## Example command
 
 ```bash
-python run_v3_0_concept_roll.py --summary-only
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py --summary-only
 ```
 
 With custom thresholds:
 
 ```bash
-python run_v3_0_concept_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py \
   --steps-per-phase 8 \
   --min-inter-leg-clearance 0.05 \
   --min-target-point-clearance 0.04 \

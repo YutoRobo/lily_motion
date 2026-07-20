@@ -34,9 +34,13 @@ import os
 import sys
 import time
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
+
+GAZEBO_SCRIPT_DIR = os.path.join(ROOT, "tools", "gazebo")
+if GAZEBO_SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, GAZEBO_SCRIPT_DIR)
 
 from run_v3_0_gazebo_replay import (  # noqa: E402
     load_command_log_records,

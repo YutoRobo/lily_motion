@@ -21,9 +21,9 @@ The intent is to distinguish:
 ## Added files
 
 - `lily_motion_v3/command_resampler.py`
-- `run_v3_0_resample_commands.py`
-- updated `run_v3_0_command_diagnostics.py`
-- updated `run_v3_0_gazebo_replay.py`
+- `tools/command_generation/run_v3_0_resample_commands.py`
+- updated `tools/diagnostics/run_v3_0_command_diagnostics.py`
+- updated `tools/gazebo/run_v3_0_gazebo_replay.py`
 - `tests/test_v3_0_command_resampler.py`
 
 ## Recommended workflow
@@ -31,7 +31,7 @@ The intent is to distinguish:
 Generate the legacy state-machine command log:
 
 ```bash
-python run_v3_0_legacy_state_machine_replay.py \
+python archive/v3_experiment_scripts/run_v3_0_legacy_state_machine_replay.py \
   --surface-id 1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -43,7 +43,7 @@ python run_v3_0_legacy_state_machine_replay.py \
 Diagnose the raw command jumps:
 
 ```bash
-python run_v3_0_command_diagnostics.py \
+python tools/diagnostics/run_v3_0_command_diagnostics.py \
   --command-log testdata/v3_0_23_legacy_state_machine_commands.jsonl \
   --top-joints 8
 ```
@@ -51,7 +51,7 @@ python run_v3_0_command_diagnostics.py \
 Create a smoother preview command log:
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_23_legacy_state_machine_commands.jsonl \
   --resample-factor 4 \
   --smooth-window 1 \
@@ -61,7 +61,7 @@ python run_v3_0_resample_commands.py \
 Replay in Gazebo:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 60 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 2.0 \
@@ -74,7 +74,7 @@ python run_v3_0_gazebo_replay.py \
 Alternatively, replay an existing command log with on-the-fly resampling:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 60 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 2.0 \

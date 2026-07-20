@@ -9,7 +9,7 @@ data/reference_candidates/v3_0_42c_candidate_02_x8_sw40/commands.jsonl
 Example replay command:
 
 ```bash
-python run_v3_0_42e_effort_replay_plot.py \
+python archive/v3_experiment_scripts/run_v3_0_42e_effort_replay_plot.py \
   --command-log testdata/v3_0_42c_candidates/candidate_02_x8_sw40_commands.jsonl \
   --strict-command-log-input \
   --rate 5 \

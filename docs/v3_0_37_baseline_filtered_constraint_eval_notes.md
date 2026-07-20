@@ -35,7 +35,7 @@ python run_v3_0_baseline_filtered_constraint_eval.py \
 ## Gazebo replay
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --strict-command-log-input \
   --rate 80 \
   --frame-hold-sec 0.0 \

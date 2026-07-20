@@ -13,7 +13,7 @@ jumps.
 Recommended baseline:
 
 ```bash
-python run_v3_0_pure_legacy_repeated_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_pure_legacy_repeated_roll.py \
   --surface-sequence 1,5,6,2,1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -27,7 +27,7 @@ python run_v3_0_pure_legacy_repeated_roll.py \
 Diagnose boundary jumps:
 
 ```bash
-python run_v3_0_roll_boundary_diagnostics.py \
+python archive/v3_experiment_scripts/run_v3_0_roll_boundary_diagnostics.py \
   --command-log testdata/v3_0_34_pure_legacy_m30_commands.jsonl \
   --segment-key roll_index \
   --unwrap-continuous-angles \
@@ -37,7 +37,7 @@ python run_v3_0_roll_boundary_diagnostics.py \
 Generate Gazebo preview commands:
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_34_pure_legacy_m30_commands.jsonl \
   --unwrap-continuous-angles \
   --resample-factor 8 \
@@ -50,7 +50,7 @@ python run_v3_0_resample_commands.py \
 Replay:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 80 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 3.0 \

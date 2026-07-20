@@ -21,7 +21,7 @@ This is still not a final constrained optimizer.  It is a deterministic, project
 ## New CLI options
 
 ```bash
-python run_v3_0_concept_roll.py --summary-only
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py --summary-only
 ```
 
 Optional controls:
@@ -35,7 +35,7 @@ Optional controls:
 Example with a wider search:
 
 ```bash
-python run_v3_0_concept_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py \
   --summary-only \
   --body-roll-search-x-offsets '-0.30,-0.20,-0.10,0.0,0.10,0.20,0.30' \
   --body-roll-search-z-offsets '0.0,0.10,0.20,0.30,0.40,0.50,0.60'

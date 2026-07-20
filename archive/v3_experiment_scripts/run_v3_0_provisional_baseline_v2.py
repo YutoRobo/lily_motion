@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def _run(cmd):
@@ -39,7 +39,7 @@ def main():
 
     # v3.0.42C case27 parameters.
     gen_cmd = [
-        args.python, 'run_v3_0_pure_legacy_repeated_roll.py',
+        args.python, 'archive/v3_experiment_scripts/run_v3_0_pure_legacy_repeated_roll.py',
         '--surface-sequence', '1,5,6,2,1',
         '--move-dist', '0.40',
         '--support-dist', '0.77',
@@ -62,7 +62,7 @@ def main():
         gen_cmd.append('--skip-constraints')
 
     smooth_cmd = [
-        args.python, 'run_v3_0_resample_commands.py',
+        args.python, 'tools/command_generation/run_v3_0_resample_commands.py',
         '--input', raw_log,
         '--output', filtered_log,
         '--resample-factor', '8',
@@ -107,7 +107,7 @@ def main():
             'generation_report': raw_report,
             'resample_summary': smooth_report,
         },
-        'gazebo_replay_command': 'python run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filtered_log,
+        'gazebo_replay_command': 'python tools/gazebo/run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filtered_log,
     }
     with open(manifest, 'w') as f:
         json.dump(info, f, indent=2, sort_keys=True)

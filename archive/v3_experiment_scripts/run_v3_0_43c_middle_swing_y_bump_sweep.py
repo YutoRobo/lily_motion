@@ -17,11 +17,11 @@ Design rule:
   This is intentionally a minimum-difference experiment.  It does not refactor
   the sweep pipeline and it does not change IK/support/landing algorithms.
   With middle_swing_y_escape=0.0 and mode=none, generation must reproduce the
-  provisional baseline v2 command sequence.  Use run_v3_0_provisional_baseline_v2.py
+  provisional baseline v2 command sequence.  Use archive/v3_experiment_scripts/run_v3_0_provisional_baseline_v2.py
   at any time to regenerate the unchanged baseline v2 logs.
 
 Recommended first pass:
-  python run_v3_0_43c_middle_swing_y_bump_sweep.py \
+  python archive/v3_experiment_scripts/run_v3_0_43c_middle_swing_y_bump_sweep.py \
     --middle-swing-y-escapes 0.00,0.05,0.10,0.15,0.20 \
     --middle-swing-y-escape-modes outward \
     --middle-swing-y-escape-phases rf3_only
@@ -42,7 +42,7 @@ except ImportError:
     from pipes import quote as _shell_quote
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -640,7 +640,7 @@ def main():
                 'constraint_filtered': item.get('constraint_filtered'),
                 'raw_command_log': raw_path,
                 'filtered_command_log': filt_path,
-                'gazebo_replay_command': 'python run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filt_path,
+                'gazebo_replay_command': 'python tools/gazebo/run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filt_path,
             }
             with open(meta_path, 'w') as f:
                 json.dump(meta, f, indent=2, sort_keys=True)

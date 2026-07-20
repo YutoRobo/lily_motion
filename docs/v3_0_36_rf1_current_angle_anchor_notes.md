@@ -36,7 +36,7 @@ It only ensures that the RF-1 phase starts from the actual current servo state.
 ## Recommended command
 
 ```bash
-python run_v3_0_pure_legacy_repeated_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_pure_legacy_repeated_roll.py \
   --surface-sequence 1,5,6,2,1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -51,7 +51,7 @@ python run_v3_0_pure_legacy_repeated_roll.py \
 Then resample inside each roll segment:
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_36_pure_legacy_repeated_m30_anchor_commands.jsonl \
   --resample-factor 8 \
   --smooth-window 3 \
@@ -63,7 +63,7 @@ python run_v3_0_resample_commands.py \
 Replay strictly from the generated log:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --strict-command-log-input \
   --rate 80 \
   --frame-hold-sec 0.0 \

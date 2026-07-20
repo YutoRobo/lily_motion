@@ -18,14 +18,14 @@ The key assumptions are:
 lily_motion_v3/command_filter.py
 lily_motion_v3/contact_lock.py
 lily_motion_v3/whole_roll_evaluator.py
-run_v3_0_whole_roll_eval.py
-run_v3_0_parameter_sweep.py
+tools/diagnostics/run_v3_0_whole_roll_eval.py
+tools/diagnostics/run_v3_0_parameter_sweep.py
 ```
 
 ## Main command
 
 ```bash
-python run_v3_0_whole_roll_eval.py --summary-only
+python tools/diagnostics/run_v3_0_whole_roll_eval.py --summary-only
 ```
 
 Example output fields:
@@ -47,7 +47,7 @@ generator_ik_failure_count
 ## Parameter sweep
 
 ```bash
-python run_v3_0_parameter_sweep.py \
+python tools/diagnostics/run_v3_0_parameter_sweep.py \
   --steps-per-phase 6,8 \
   --lift-heights 0.06,0.08,0.10 \
   --clearance-heights 0.05,0.08 \

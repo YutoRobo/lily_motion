@@ -12,7 +12,7 @@ The point is not to finalize a good rolling gait yet. The point is to prove that
 lily_motion_v3/roll_candidate.py
 lily_motion_v3/role_utils.py
 lily_motion_v3/v3_roll_candidate_generator.py
-run_v3_0_concept_roll.py
+archive/v3_experiment_scripts/run_v3_0_concept_roll.py
 docs/v3_0_1_project_contained_one_roll_candidate_notes.md
 ```
 
@@ -90,13 +90,13 @@ The generator keeps `legacy_dependency = false`, but it is not yet a Gazebo-read
 ## Run command
 
 ```bash
-python run_v3_0_concept_roll.py --summary-only
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py --summary-only
 ```
 
 Full JSON output:
 
 ```bash
-python run_v3_0_concept_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py \
   --steps-per-phase 8 \
   --output testdata/v3_0_1_concept_roll_forward.json
 ```

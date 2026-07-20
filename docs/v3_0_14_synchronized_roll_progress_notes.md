@@ -31,13 +31,13 @@ This is still not a final gait.  It is a trajectory-level search scaffold.
 Phase-local legacy v3 behavior:
 
 ```bash
-python run_v3_0_whole_roll_eval.py --summary-only
+python tools/diagnostics/run_v3_0_whole_roll_eval.py --summary-only
 ```
 
 Synchronized-progress behavior:
 
 ```bash
-python run_v3_0_whole_roll_eval.py \
+python tools/diagnostics/run_v3_0_whole_roll_eval.py \
   --summary-only \
   --trajectory-mode synchronized \
   --synchronized-steps 72 \
@@ -49,7 +49,7 @@ python run_v3_0_whole_roll_eval.py \
 Sweep example:
 
 ```bash
-python run_v3_0_parameter_sweep.py \
+python tools/diagnostics/run_v3_0_parameter_sweep.py \
   --trajectory-modes phase,synchronized \
   --synchronized-steps 48,72 \
   --contact-plan-variants front_pair_roll,diagonal_front_roll \

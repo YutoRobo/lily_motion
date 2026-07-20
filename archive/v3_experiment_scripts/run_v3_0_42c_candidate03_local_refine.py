@@ -40,7 +40,7 @@ import math
 import os
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -767,7 +767,7 @@ def main():
                 'visual_anchor_distance': item.get('visual_anchor_distance'),
                 'raw_command_log': raw_path,
                 'filtered_command_log': filt_path,
-                'gazebo_replay_command': 'python run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filt_path,
+                'gazebo_replay_command': 'python tools/gazebo/run_v3_0_gazebo_replay.py --command-log %s --strict-command-log-input --rate 15 --hold-start-sec 2.0 --hold-end-sec 2.0 --diagnose-command-log' % filt_path,
             }
             with open(meta_path, 'w') as f:
                 json.dump(meta, f, indent=2, sort_keys=True)

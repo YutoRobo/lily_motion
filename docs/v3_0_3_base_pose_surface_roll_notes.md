@@ -19,13 +19,13 @@ This is still a concept generator, not a finalized gait.
 ## Run
 
 ```bash
-python run_v3_0_concept_roll.py --summary-only
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py --summary-only
 ```
 
 Save full output:
 
 ```bash
-python run_v3_0_concept_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py \
   --steps-per-phase 8 \
   --output testdata/v3_0_3_concept_roll_forward.json
 ```
@@ -33,7 +33,7 @@ python run_v3_0_concept_roll.py \
 Try a smaller roll angle for diagnosis:
 
 ```bash
-python run_v3_0_concept_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_concept_roll.py \
   --summary-only \
   --body-roll-pitch-deg 45
 ```

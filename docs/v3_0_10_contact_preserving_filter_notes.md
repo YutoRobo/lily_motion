@@ -34,7 +34,7 @@ This is not yet the final actuator command filter. It is a diagnostic / bridge f
 ## Command
 
 ```bash
-python run_v3_0_whole_roll_eval.py \
+python tools/diagnostics/run_v3_0_whole_roll_eval.py \
   --summary-only \
   --contact-plan-variant front_pair_roll \
   --steps-per-phase 6 \

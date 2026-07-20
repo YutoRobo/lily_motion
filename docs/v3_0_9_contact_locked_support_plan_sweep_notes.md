@@ -29,17 +29,17 @@ The point is not that these are final gait patterns.  The point is that the supp
 ## Run examples
 
 ```bash
-python run_v3_0_whole_roll_eval.py --summary-only
+python tools/diagnostics/run_v3_0_whole_roll_eval.py --summary-only
 ```
 
 ```bash
-python run_v3_0_whole_roll_eval.py \
+python tools/diagnostics/run_v3_0_whole_roll_eval.py \
   --summary-only \
   --contact-plan-variant next_only_roll
 ```
 
 ```bash
-python run_v3_0_parameter_sweep.py \
+python tools/diagnostics/run_v3_0_parameter_sweep.py \
   --contact-plan-variants default,next_only_roll,six_support_roll,front_pair_roll,rear_pair_roll \
   --steps-per-phase 6,8 \
   --lift-heights 0.06,0.08,0.10 \

@@ -26,7 +26,7 @@ If base pose columns are present (`base_x`, `base_y`, `base_z`, `base_roll`, `ba
 ## Import and evaluate
 
 ```bash
-python run_v3_0_import_legacy_reference.py \
+python tools/command_generation/run_v3_0_import_legacy_reference.py \
   --input testdata/legacy_published_commands.jsonl \
   --input-format auto \
   --input-unit rad \
@@ -41,7 +41,7 @@ Use `--command-source raw` to replay the exact imported command sequence. Use `-
 ## Export later from the imported candidate
 
 ```bash
-python run_v3_0_export_commands.py \
+python tools/command_generation/run_v3_0_export_commands.py \
   --profile imported_reference \
   --candidate testdata/legacy_reference_candidate.json \
   --command-source raw \
@@ -51,7 +51,7 @@ python run_v3_0_export_commands.py \
 ## Gazebo preview
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 20 \
   --frame-hold-sec 0.25 \
   --hold-start-sec 2.0 \

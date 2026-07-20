@@ -1,12 +1,12 @@
 # v3.0.35 Python2 unwrap fix and replay guard
 
 Fixes `math.isfinite` usage that fails on Python 2.7.
-Adds `--strict-command-log-input` to `run_v3_0_gazebo_replay.py` so a missing processed command log does not silently fall back to generated native preview replay.
+Adds `--strict-command-log-input` to `tools/gazebo/run_v3_0_gazebo_replay.py` so a missing processed command log does not silently fall back to generated native preview replay.
 
 Recommended baseline remains pure legacy repeated roll:
 
 ```bash
-python run_v3_0_pure_legacy_repeated_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_pure_legacy_repeated_roll.py \
   --surface-sequence 1,5,6,2,1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -20,7 +20,7 @@ python run_v3_0_pure_legacy_repeated_roll.py \
 Then process commands:
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_35_pure_legacy_repeated_m30_commands.jsonl \
   --unwrap-continuous-angles \
   --resample-factor 8 \
@@ -33,7 +33,7 @@ python run_v3_0_resample_commands.py \
 Replay strictly:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --strict-command-log-input \
   --rate 80 \
   --frame-hold-sec 0.0 \

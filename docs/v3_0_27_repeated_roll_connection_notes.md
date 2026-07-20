@@ -13,7 +13,7 @@ The connection metric is deliberately simple: body XY projection versus the cent
 Gazebo check example:
 
 ```bash
-python run_v3_0_repeated_legacy_roll_eval.py \
+python archive/v3_experiment_scripts/run_v3_0_repeated_legacy_roll_eval.py \
   --surface-sequence 1,5,6,2,1 \
   --support-dist 0.76 \
   --legacy-body-z 0.41 \
@@ -22,13 +22,13 @@ python run_v3_0_repeated_legacy_roll_eval.py \
   --output-command-log testdata/v3_0_27_repeated_roll_commands.jsonl \
   --report-output testdata/v3_0_27_repeated_roll_report.json
 
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_27_repeated_roll_commands.jsonl \
   --resample-factor 8 \
   --smooth-window 3 \
   --output testdata/v3_0_27_repeated_roll_resampled_x8.jsonl
 
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 10 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 3.0 \

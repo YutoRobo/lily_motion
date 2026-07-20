@@ -13,7 +13,7 @@ This matches the current design assumption: raw contact-locked commands may pass
 
 ## New CLI options
 
-`run_v3_0_whole_roll_eval.py`:
+`tools/diagnostics/run_v3_0_whole_roll_eval.py`:
 
 ```bash
 --contact-drift-soft-limit 0.05
@@ -22,7 +22,7 @@ This matches the current design assumption: raw contact-locked commands may pass
 
 `--contact-drift-warn` remains as a deprecated alias for the soft limit.
 
-`run_v3_0_parameter_sweep.py`:
+`tools/diagnostics/run_v3_0_parameter_sweep.py`:
 
 ```bash
 --filter-windows 3,5,7,9
@@ -35,7 +35,7 @@ The sweep now includes filter window as a parameter. This is important because t
 ## Recommended command
 
 ```bash
-python run_v3_0_parameter_sweep.py \
+python tools/diagnostics/run_v3_0_parameter_sweep.py \
   --contact-plan-variants front_pair_roll,rear_pair_roll \
   --steps-per-phase 6 \
   --lift-heights 0.08 \

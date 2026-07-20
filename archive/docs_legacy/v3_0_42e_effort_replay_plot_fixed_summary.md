@@ -35,7 +35,7 @@ If `effort: []` is shown, the Gazebo/controller side is not publishing effort va
 ## Recommended command
 
 ```bash
-python run_v3_0_42e_effort_replay_plot.py \
+python archive/v3_experiment_scripts/run_v3_0_42e_effort_replay_plot.py \
   --command-log testdata/v3_0_42c_case27/candidate_01_x8_sw40_commands.jsonl \
   --strict-command-log-input \
   --rate 15 \

@@ -15,7 +15,7 @@ The adapter is not a bit-for-bit reproduction of the legacy RF implementation.  
 ## Added files
 
 - `lily_motion_v3/legacy_style_generator.py`
-- `run_v3_0_legacy_style_eval.py`
+- `tools/diagnostics/run_v3_0_legacy_style_eval.py`
 - `docs/v3_0_17_legacy_style_adapter_notes.md`
 
 ## New contact plan variant
@@ -27,7 +27,7 @@ It encodes a six-contact preparation stage and lifts the middle transition pair 
 ## Example
 
 ```bash
-python run_v3_0_legacy_style_eval.py \
+python tools/diagnostics/run_v3_0_legacy_style_eval.py \
   --summary-only \
   --step-scale 1.5 \
   --splited-num 10 \
@@ -39,7 +39,7 @@ python run_v3_0_legacy_style_eval.py \
 Try RF2 scale variants:
 
 ```bash
-python run_v3_0_legacy_style_eval.py \
+python tools/diagnostics/run_v3_0_legacy_style_eval.py \
   --summary-only \
   --step-scale 1.5 \
   --splited-num 10 \

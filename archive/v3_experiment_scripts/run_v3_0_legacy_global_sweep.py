@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import argparse, json, os, sys, itertools
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 

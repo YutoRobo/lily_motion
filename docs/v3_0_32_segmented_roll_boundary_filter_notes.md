@@ -32,7 +32,7 @@ This resets interpolation and moving-average windows at each `roll_index` bounda
 ## Recommended generation
 
 ```bash
-python run_v3_0_pure_legacy_repeated_roll.py \
+python archive/v3_experiment_scripts/run_v3_0_pure_legacy_repeated_roll.py \
   --surface-sequence 1,5,6,2,1 \
   --move-dist 0.4 \
   --support-dist 0.7 \
@@ -46,7 +46,7 @@ python run_v3_0_pure_legacy_repeated_roll.py \
 ## Recommended Gazebo-preview smoothing
 
 ```bash
-python run_v3_0_resample_commands.py \
+python tools/command_generation/run_v3_0_resample_commands.py \
   --input testdata/v3_0_32_good_pure_legacy_m30_commands.jsonl \
   --resample-factor 8 \
   --smooth-window 3 \
@@ -55,7 +55,7 @@ python run_v3_0_resample_commands.py \
 ```
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 10 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 3.0 \
@@ -67,7 +67,7 @@ python run_v3_0_gazebo_replay.py \
 Alternatively, replay can apply segmentation directly:
 
 ```bash
-python run_v3_0_gazebo_replay.py \
+python tools/gazebo/run_v3_0_gazebo_replay.py \
   --rate 10 \
   --frame-hold-sec 0.0 \
   --hold-start-sec 3.0 \
@@ -84,9 +84,9 @@ python run_v3_0_gazebo_replay.py \
 - `lily_motion_v3/command_resampler.py`
   - `resample_command_records(..., segment_key=None)`
   - `moving_average_command_records(..., segment_key=None)`
-- `run_v3_0_resample_commands.py`
+- `tools/command_generation/run_v3_0_resample_commands.py`
   - added `--segment-key`
-- `run_v3_0_gazebo_replay.py`
+- `tools/gazebo/run_v3_0_gazebo_replay.py`
   - added `--segment-key` for replay-time resampling/smoothing
 
 ## What did not change
