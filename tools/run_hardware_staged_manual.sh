@@ -331,11 +331,11 @@ run_stage \
   "${ROLL_BODY_LOG}" \
   "0" \
   "50" \
-  "Uses roll body frames 0-49 only. This is the RF2-near first motion check."
+  "Uses roll body frames 0-49 only. This is the first-quarter RF2/RF3 near-contact motion check."
 
 echo
 echo "Mandatory visual check after roll frames 0-50:"
-echo "- Confirm RF2-near clearance, no abnormal contact, no unexpected posture jump, and STOP behavior."
+echo "- Confirm first-quarter RF2/RF3-region near-contact clearance, no abnormal contact, no unexpected posture jump, and STOP behavior."
 echo "- Continue only if the operator accepts the observed posture and motion."
 
 run_stage \
