@@ -1,0 +1,4 @@
+Unified single-axis expected CAN IDs for axis10
+RUN: 0x60A
+POSITION: 0x40A
+No RUN or POSITION frames for Use=False axes.
