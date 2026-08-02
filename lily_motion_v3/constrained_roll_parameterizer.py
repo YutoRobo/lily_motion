@@ -161,9 +161,10 @@ def generate_repeated_records(surface_sequence, surface_id, support_dist, body_z
 
 def _is_finite_number(x):
     try:
-        return math.isfinite(float(x))
+        value = float(x)
     except Exception:
         return False
+    return value == value and abs(value) != float('inf')
 
 
 def is_valid_constrained_case(case):
