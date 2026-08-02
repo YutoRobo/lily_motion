@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<robot name="minimal_lily_two_leg">
+  <link name="body"/>
+  <link name="BLF_mount"/><link name="BLF_base"/><link name="BLF_thigh"/><link name="BLF_tibia"/><link name="BLF_foot"/>
+  <link name="BLH_mount"/><link name="BLH_base"/><link name="BLH_thigh"/><link name="BLH_tibia"/><link name="BLH_foot"/>
+
+  <joint name="BLF_coxa_joint" type="fixed">
+    <parent link="body"/><child link="BLF_mount"/><origin xyz="1 0 0" rpy="0 0 0"/>
+  </joint>
+  <joint name="BLF_base_clause_joint" type="revolute">
+    <parent link="BLF_mount"/><child link="BLF_base"/><origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+  </joint>
+  <joint name="BLF_thigh_joint" type="revolute">
+    <parent link="BLF_base"/><child link="BLF_thigh"/><origin xyz="1 0 0" rpy="0 0 1.5707963267948966"/><axis xyz="0 1 0"/>
+  </joint>
+  <joint name="BLF_tibia_joint" type="revolute">
+    <parent link="BLF_thigh"/><child link="BLF_tibia"/><origin xyz="1 0 0" rpy="0 0 0"/><axis xyz="1 1 0"/>
+  </joint>
+  <joint name="BLF_appendix_joint" type="fixed">
+    <parent link="BLF_tibia"/><child link="BLF_foot"/><origin xyz="1 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="BLH_coxa_joint" type="fixed">
+    <parent link="body"/><child link="BLH_mount"/><origin xyz="1 5 0" rpy="0 0 0"/>
+  </joint>
+  <joint name="BLH_base_clause_joint" type="revolute">
+    <parent link="BLH_mount"/><child link="BLH_base"/><origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/>
+  </joint>
+  <joint name="BLH_thigh_joint" type="revolute">
+    <parent link="BLH_base"/><child link="BLH_thigh"/><origin xyz="1 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/>
+  </joint>
+  <joint name="BLH_tibia_joint" type="revolute">
+    <parent link="BLH_thigh"/><child link="BLH_tibia"/><origin xyz="1 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+  </joint>
+  <joint name="BLH_appendix_joint" type="fixed">
+    <parent link="BLH_tibia"/><child link="BLH_foot"/><origin xyz="1 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>
