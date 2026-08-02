@@ -117,6 +117,12 @@ class UnifiedCmdForJetsonStateMachineTest(unittest.TestCase):
         self.sm = self.module.StateMachine(self.bus)
         self.assertTrue(self.sm.handle_use_selection(10, True))
 
+    def test_runtime_subscribes_to_only_one_position_topic(self):
+        topics = [topic for topic, unused_callback in self.rospy.subscribers]
+        self.assertIn("/cmdForJetson", topics)
+        self.assertIn("/ui/leg_command", topics)
+        self.assertNotIn("/can/axis_command", topics)
+
     def test_run_is_sent_only_to_use_true_axes(self):
         self.assertTrue(self.sm.send_run_start_command())
         self.assertEqual([0x60A],
@@ -149,12 +155,12 @@ class UnifiedCmdForJetsonStateMachineTest(unittest.TestCase):
         self.assertEqual([0x40A],
                          [message.arbitration_id for message in self.bus.sent])
 
-    def test_legacy_external_axis_topic_is_ignored(self):
+    def test_direct_legacy_callback_is_rejected(self):
         msg = type("StringValue", (object,), {"data": "position:10:0.01"})()
         self.assertFalse(self.sm.external_axis_command_callback(msg))
         self.assertEqual([], self.bus.sent)
         self.assertTrue(any(
-            "/can/axis_command ignored" in text
+            "external axis command ignored" in text
             for level, text in self.rospy.logs if level == "warn"))
 
 
