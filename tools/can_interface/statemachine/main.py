@@ -4,7 +4,7 @@ import argparse
 import os
 import rospy
 import can
-from state_machine import StateMachine
+from unified_state_machine import StateMachine
 
 # sudo ip link set can0 up type can bitrate 500000
 # sudo ip link set can0 up
@@ -28,26 +28,25 @@ def main():
     except Exception as e:
         rospy.logfatal("CAN bus init failed: interface=%s channel=%s bitrate=%d error=%s", args.can_interface, args.can_channel, args.can_bitrate, e)
         return
-    
-    # ステートマシンのインスタンスを作成
+
+    # /cmdForJetson一本化・Use=True軸のみ送信するStateMachine
     sm = StateMachine(bus)
 
     # CAN受信用のリスナーを設定
     # メッセージを受信するたびに sm.can_callback が呼ばれる
-    #can_listener = can.Listener()
     can_listener = can.BufferedReader()
     can_listener.on_message_received = sm.can_callback
     notifier = can.Notifier(bus, [can_listener])
 
     rospy.loginfo("ステートマシンを起動しました。Ctrl+Cで停止します。")
-    
-    rate = rospy.Rate(30) # 50Hz
+
+    rate = rospy.Rate(30)
     try:
         while not rospy.is_shutdown():
             # ステートマシンの周期処理を実行
             sm.execute()
             rate.sleep()
-    
+
     except KeyboardInterrupt:
         rospy.loginfo("シャットダウンします。")
     finally:
