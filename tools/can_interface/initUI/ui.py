@@ -8,10 +8,13 @@ HOME_REPEAT_MS = 80  # 長押し時の繰り返し周期[ms]（調整OK）
 
 STATE_COLOR = {
     "Disconnected": "#cccccc",
-    "Connected":    "#ffff99",
-    "Aligned":      "#99ccff",
-    "Homed":        "#99ff99",
-    "Run":          "#ff9999",
+    "Connected":        "#ffff99",
+    "Aligning":         "#ffcc66",
+    "ALIGN incomplete": "#ffcc99",
+    "Aligned":          "#99ccff",
+    "Homed":            "#99ff99",
+    "Running":          "#ff9999",
+    "Error":            "#ff6666",
 }
 
 # ===============================
@@ -33,9 +36,22 @@ class LegControlUI(object):
 
         self.pub_cmd = rospy.Publisher("/ui/leg_command", String, queue_size=10)
         rospy.Subscriber("/ui/leg_status", String, self.status_callback)
+        rospy.Subscriber("/ui/leg_use_status", String, self.use_status_callback)
+        rospy.Subscriber(
+            "/ui/motion_check_status", String, self.motion_check_status_callback)
+        rospy.Subscriber(
+            "/ui/diagnostic_targets", String, self.diagnostic_targets_callback)
+        rospy.Subscriber(
+            "/ui/diagnostic_status", String, self.diagnostic_status_callback)
 
         self.legs = [LegUIState(i) for i in range(NUM_LEGS)]
         self.widgets = {}
+        self.motion_axis_var = tk.StringVar(value="")
+        self.motion_direction_var = tk.StringVar(value="+")
+        self.motion_check_active = False
+        self.motion_candidates = []
+        self.motion_target_labels = {}
+        self.diagnostic_run_sent_axes = set()
 
         # 長押し用：after job 管理
         self.home_repeat_job = {}  # key=(leg_id,dir) -> job id
@@ -50,14 +66,49 @@ class LegControlUI(object):
         top = tk.Frame(self.root)
         top.pack(side=tk.TOP, fill=tk.X)
 
-        tk.Button(top, text="ALIGN (Use Legs)", command=self.align_use_legs,
-                  font=("Helvetica", 12, "bold")).pack(side=tk.LEFT, padx=5)
+        self.align_all_button = tk.Button(
+            top, text="ALIGN (Use Legs)", command=self.align_use_legs,
+            font=("Helvetica", 12, "bold"))
+        self.align_all_button.pack(side=tk.LEFT, padx=5)
 
-        tk.Button(top, text="RUN", command=self.send_run,
-                  font=("Helvetica", 12, "bold")).pack(side=tk.LEFT, padx=5)
+        self.run_button = tk.Button(
+            top, text="RUN ALL AXES", command=self.send_run,
+            font=("Helvetica", 12, "bold"))
+        self.run_button.pack(side=tk.LEFT, padx=5)
 
         tk.Button(top, text="STOP", command=self.send_stop,
                   font=("Helvetica", 12, "bold")).pack(side=tk.LEFT, padx=5)
+
+        motion = tk.LabelFrame(self.root, text="RUN動作確認")
+        motion.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+        tk.Label(motion, text="対象軸").pack(side=tk.LEFT)
+        self.motion_axis_menu = tk.OptionMenu(motion, self.motion_axis_var, "")
+        self.motion_axis_menu.pack(side=tk.LEFT)
+        tk.Label(motion, text="方向").pack(side=tk.LEFT)
+        tk.Radiobutton(
+            motion, text="+", variable=self.motion_direction_var,
+            value="+").pack(side=tk.LEFT)
+        tk.Radiobutton(
+            motion, text="-", variable=self.motion_direction_var,
+            value="-").pack(side=tk.LEFT)
+        self.diagnostic_run_button = tk.Button(
+            motion, text="選択軸 Diagnostic RUN",
+            command=self.start_diagnostic_run)
+        self.diagnostic_run_button.pack(side=tk.LEFT, padx=5)
+        self.motion_start_button = tk.Button(
+            motion, text="RUN動作確認開始", command=self.start_motion_check)
+        self.motion_start_button.pack(side=tk.LEFT, padx=5)
+        self.motion_cancel_button = tk.Button(
+            motion, text="動作確認中止", command=self.cancel_motion_check)
+        self.motion_cancel_button.pack(side=tk.LEFT, padx=5)
+        self.motion_status_label = tk.Label(
+            motion,
+            text="待機 / 振幅0.020 rad (1.15 deg), 速度0.05 rad/s, q0へ復帰")
+        self.motion_status_label.pack(side=tk.LEFT, padx=5)
+        tk.Label(
+            self.root,
+            text="警告: RUN動作確認中は外部回転publisherを起動しないこと",
+            fg="#aa0000").pack(side=tk.TOP, fill=tk.X)
 
         table = tk.Frame(self.root)
         table.pack(side=tk.TOP)
@@ -112,6 +163,7 @@ class LegControlUI(object):
 
         self.widgets[leg_id] = {
             "use_var": use_var,
+            "use": chk,
             "state": lbl_state,
             "align": btn_align,
             "home_l": btn_l,
@@ -122,6 +174,48 @@ class LegControlUI(object):
     # ===============================
     # ROS受信
     # ===============================
+    def diagnostic_targets_callback(self, msg):
+        targets = []
+        labels = {}
+        for field in msg.data.split(";") if msg.data else []:
+            try:
+                axis_text, label = field.split("|", 1)
+                axis = int(axis_text)
+            except Exception:
+                continue
+            targets.append(axis)
+            labels[axis] = label
+        self.root.after(
+            0, lambda: self._apply_diagnostic_targets(targets, labels))
+
+    def _apply_diagnostic_targets(self, targets, labels):
+        self.motion_candidates = list(targets)
+        self.motion_target_labels = dict(labels)
+
+    def diagnostic_status_callback(self, msg):
+        try:
+            axis_text, status = msg.data.split("|", 1)
+            axis = int(axis_text)
+        except Exception:
+            return
+        self.root.after(0, lambda: self._apply_diagnostic_status(axis, status))
+
+    def _apply_diagnostic_status(self, axis, status):
+        if status == "Diagnostic RUN sent":
+            self.diagnostic_run_sent_axes.add(axis)
+        else:
+            self.diagnostic_run_sent_axes.discard(axis)
+        self.motion_status_label.config(text="axis%d: %s" % (axis, status))
+
+    def motion_check_status_callback(self, msg):
+        status = msg.data
+        self.root.after(0, lambda: self._apply_motion_check_status(status))
+
+    def _apply_motion_check_status(self, status):
+        self.motion_check_active = (
+            status.startswith("active:") or status.startswith("returning:"))
+        self.motion_status_label.config(text=status)
+
     def status_callback(self, msg):
         try:
             leg_id, state = msg.data.split(",")
@@ -132,29 +226,31 @@ class LegControlUI(object):
         # GUIスレッドで実行させる
         self.root.after(0, lambda: self._apply_status_update(leg_id, state))
 
+    def use_status_callback(self, msg):
+        try:
+            leg_id, active = msg.data.split(",")
+            leg_id = int(leg_id)
+            active = bool(int(active))
+        except:
+            return
+        self.root.after(
+            0, lambda: self._apply_use_status_update(leg_id, active))
+
+    def _apply_use_status_update(self, leg_id, active):
+        if leg_id not in self.widgets:
+            return
+        self.legs[leg_id].use = bool(active)
+        self.widgets[leg_id]["use_var"].set(1 if active else 0)
+
     def _apply_status_update(self, leg_id, state):
         # ★これがないとKeyErrorは消えない
         if leg_id not in self.widgets:
             return
         leg = self.legs[leg_id]
-        prev = leg.state
         leg.state = state
 
-        # 切断時は強制OFFし、StateMachine側のactive selectionも落とす
-        if state == "Disconnected":
-            if leg.use:
-                leg.use = False
-                self.widgets[leg_id]["use_var"].set(0)
-                self.publish_use_state(leg_id)
-            else:
-                self.widgets[leg_id]["use_var"].set(0)
-            return
-
-        # Disconnected -> 何か の瞬間は自動ONし、StateMachineへUse=Trueを通知
-        if prev == "Disconnected":
-            leg.use = True
-            self.widgets[leg_id]["use_var"].set(1)
-            self.publish_use_state(leg_id)
+        # Use is an explicit initialization/RUN configuration. Connection
+        # status must never auto-enable or auto-disable it.
 
     # ===============================
     # Use操作（ユーザーが管理）
@@ -195,10 +291,35 @@ class LegControlUI(object):
     # ===============================
     # UI → ROS
     # ===============================
+    def start_diagnostic_run(self):
+        axis = self._selected_motion_axis()
+        if axis is None:
+            self.motion_status_label.config(text="rejected: target_not_selected")
+            return
+        self.pub_cmd.publish("diagnostic_run:{}".format(axis))
+
+    def _selected_motion_axis(self):
+        label = self.motion_axis_var.get()
+        for axis, candidate_label in self.motion_target_labels.items():
+            if candidate_label == label:
+                return axis
+        return None
+
+    def start_motion_check(self):
+        axis = self._selected_motion_axis()
+        if axis is None:
+            self.motion_status_label.config(text="rejected: target_not_selected")
+            return
+        direction = self.motion_direction_var.get()
+        self.pub_cmd.publish(
+            "motion_check_start:{}:{}".format(axis, direction))
+
+    def cancel_motion_check(self):
+        self.pub_cmd.publish("motion_check_cancel")
+
     def align_use_legs(self):
-        for leg in self.legs:
-            if leg.state == "Connected" and leg.use:
-                self.pub_cmd.publish("align:{}".format(leg.leg_id))
+        # StateMachine selects only Use=True, incomplete, standby-ready axes.
+        self.pub_cmd.publish("align")
 
     def send_align(self, leg_id):
         if self.legs[leg_id].use:
@@ -225,20 +346,72 @@ class LegControlUI(object):
     def update_ui_loop(self):
         for i in range(NUM_LEGS):
             self.update_leg_ui(i)
+        self.update_motion_check_ui()
         self.root.after(200, self.update_ui_loop)
+
+    def update_motion_check_ui(self):
+        candidates = list(self.motion_candidates)
+        labels = [self.motion_target_labels[axis] for axis in candidates
+                  if axis in self.motion_target_labels]
+        menu = self.motion_axis_menu["menu"]
+        current = self.motion_axis_var.get()
+        current_labels = getattr(self, "_rendered_motion_labels", None)
+        if labels != current_labels:
+            self._rendered_motion_labels = list(labels)
+            menu.delete(0, "end")
+            for label in labels:
+                menu.add_command(
+                    label=label,
+                    command=lambda value=label: self.motion_axis_var.set(value))
+            if not labels:
+                self.motion_axis_var.set("")
+            elif current not in labels:
+                self.motion_axis_var.set(labels[0])
+        axis = self._selected_motion_axis()
+        diagnostic_sent = axis in self.diagnostic_run_sent_axes
+        self.diagnostic_run_button.config(
+            state=tk.NORMAL if axis is not None and not self.motion_check_active
+            else tk.DISABLED)
+        self.motion_start_button.config(
+            state=tk.NORMAL if diagnostic_sent and not self.motion_check_active
+            else tk.DISABLED)
+        self.motion_cancel_button.config(
+            state=tk.NORMAL if self.motion_check_active else tk.DISABLED)
+        self.align_all_button.config(
+            state=tk.DISABLED if self.motion_check_active else tk.NORMAL)
+        self.run_button.config(
+            state=tk.DISABLED if self.motion_check_active else tk.NORMAL)
 
     def update_leg_ui(self, leg_id):
         leg = self.legs[leg_id]
         w = self.widgets[leg_id]
 
-        # 状態色
-        w["state"].config(text=leg.state, bg=STATE_COLOR.get(leg.state, "white"))
+        # Detailed diagnostics may suffix Error / ALIGN incomplete.
+        color_key = leg.state
+        if leg.state.startswith("Error"):
+            color_key = "Error"
+        elif leg.state.startswith("ALIGN incomplete"):
+            color_key = "ALIGN incomplete"
+        w["state"].config(text=leg.state, bg=STATE_COLOR.get(color_key, "white"))
 
-        # AlignはConnectedのみ
-        w["align"].config(state=tk.NORMAL if leg.state == "Connected" else tk.DISABLED)
+        # Use configuration is frozen once ALIGN starts.
+        session_state = (leg.state in (
+            "Aligning", "Aligned", "Homed", "Running")
+            or leg.state.startswith("ALIGN incomplete")
+            or leg.state.startswith("Error"))
+        w["use"].config(
+            state=tk.DISABLED if session_state or self.motion_check_active
+            else tk.NORMAL)
+
+        # Retry is accepted only for standby-ready incomplete axes.
+        align_enable = leg.use and leg.state == "Connected"
+        w["align"].config(
+            state=tk.NORMAL if align_enable and not self.motion_check_active
+            else tk.DISABLED)
 
         # 原点操作はAlignedのみ
-        home_enable = (leg.state == "Aligned")
+        home_enable = (
+            leg.state == "Aligned" and not self.motion_check_active)
         for k in ["home_l", "home_r", "home_set"]:
             w[k].config(state=tk.NORMAL if home_enable else tk.DISABLED)
 
