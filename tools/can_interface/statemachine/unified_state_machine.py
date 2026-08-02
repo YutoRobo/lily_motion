@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
-"""Production StateMachine with /cmdForJetson as the only position input.
-
-The legacy StateMachine still contains the historical /can/axis_command
-subscriber for compatibility with old tests and tools. This production
-subclass disables that position path and makes normal RUN fan-out obey the
-UI Use selection.
-"""
+"""Production StateMachine with /cmdForJetson as the sole position input."""
 from __future__ import division
 
 import math
 import rospy
 
-from state_machine import (JOINT_LIMITS_RAD, JOINT_NAMES, NUM_LEGS,
-                           StateMachine as LegacyStateMachine)
+from sensor_msgs.msg import JointState
+from std_msgs.msg import String
+from state_machine import (
+    DEFAULT_HOME_STEP,
+    JOINT_LIMITS_RAD,
+    JOINT_NAMES,
+    NUM_LEGS,
+    LegInfo,
+    StateMachine as LegacyStateMachine,
+)
+from motion_check import DEFAULT_MOTION_CHECK_CONFIG
 
 
 class StateMachine(LegacyStateMachine):
@@ -21,20 +24,66 @@ class StateMachine(LegacyStateMachine):
     Position commands enter only through /cmdForJetson as a 24-element
     sensor_msgs/JointState. Use=True determines which axes receive RUN and
     POS_SET CAN frames. Use=False axes retain stable indexes in the incoming
-    24-element vector but receive no RUN or position CAN traffic.
+    vector but receive no RUN or position CAN traffic.
+
+    The historical /can/axis_command subscriber is intentionally not created.
     """
 
     def __init__(self, bus):
-        LegacyStateMachine.__init__(self, bus)
+        self.bus = bus
+
+        self.legs = [LegInfo(i) for i in range(NUM_LEGS)]
+        self.active_joints = set()
+
+        self.is_run = False
+        self.can_interface_ok = True
+        self.send_error_latched = False
+        self.error_latched = False
+        self.global_error_details = []
+        self.alignment_generation = 0
+        self.stop_in_progress = False
+
+        self.motion_check_config = DEFAULT_MOTION_CHECK_CONFIG
+        self.motion_check_active = False
+        self.motion_check_axis = None
+        self.motion_check_direction = None
+        self.motion_check_q0 = None
+        self.motion_check_values = []
+        self.motion_check_index = 0
+        self.motion_check_next_send_time = 0.0
+        self.motion_check_complete_time = None
+        self.motion_check_mode = None
+        self.motion_check_last_failed_position = None
+        self.last_external_position_command_time = None
+        self.external_position_active_window_sec = 0.5
+
+        self.home_step = DEFAULT_HOME_STEP
+
+        self.status_pub = rospy.Publisher(
+            "/ui/leg_status", String, queue_size=50)
+        self.use_status_pub = rospy.Publisher(
+            "/ui/leg_use_status", String, queue_size=50)
+        self.motion_check_status_pub = rospy.Publisher(
+            "/ui/motion_check_status", String, queue_size=20)
+        self.diagnostic_targets_pub = rospy.Publisher(
+            "/ui/diagnostic_targets", String, queue_size=20)
+        self.diagnostic_status_pub = rospy.Publisher(
+            "/ui/diagnostic_status", String, queue_size=20)
+
+        rospy.Subscriber(
+            "/ui/leg_command", String, self.ui_command_callback)
+        rospy.Subscriber(
+            "/cmdForJetson", JointState, self.coordinate_callback)
+
         rospy.loginfo(
-            "Unified command mode enabled: /cmdForJetson is the only "
-            "external position input; CAN fan-out follows Use=True axes")
+            "Unified command mode enabled: position input=/cmdForJetson; "
+            "CAN fan-out follows Use=True axes")
 
     def external_axis_command_callback(self, msg):
-        """Reject the retired /can/axis_command position interface."""
+        """Reject direct calls to the retired external position callback."""
         text = getattr(msg, "data", "")
         rospy.logwarn(
-            "[DEPRECATED] /can/axis_command ignored (%s). "
+            "[DEPRECATED] external axis command ignored (%s). "
             "Publish a 24-element JointState to /cmdForJetson instead.",
             text)
         return False
