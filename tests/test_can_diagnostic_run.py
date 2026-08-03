@@ -111,11 +111,11 @@ class DiagnosticRunTest(unittest.TestCase):
         self.assertNotIn("build_motion_values", source)
         self.assertNotIn('leg.state == "Running"', source)
 
-    def test_l_normal_all_axis_run_is_unchanged(self):
+    def test_l_normal_run_sends_only_use_axes(self):
         self.ready(10)
         self.assertTrue(self.sm.handle_run_request())
         ids = [m.arbitration_id for m in self.bus.sent if 0x600 <= m.arbitration_id <= 0x617]
-        self.assertEqual(list(range(0x600, 0x618)), ids)
+        self.assertEqual([0x60A], ids)
 
 if __name__ == "__main__":
     unittest.main()

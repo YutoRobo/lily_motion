@@ -27,7 +27,7 @@ class Frame(object):
 
 
 def position_payload(value):
-    return [0, 0, 0, 0] + list(struct.pack("<f", float(value)))
+    return [0, 0, 0, 0] + list(bytearray(struct.pack("<f", float(value))))
 
 
 class MultiActuatorEmulatorUnitTest(unittest.TestCase):

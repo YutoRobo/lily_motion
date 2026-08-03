@@ -161,18 +161,18 @@ class LegacyAlignmentRetryTest(unittest.TestCase):
         self.assertTrue(self.sm.legs[10].aligned)
         self.assertTrue(self.sm.legs[12].aligned)
 
-    def test_e_use_false_does_not_gate_but_commands_fan_out(self):
+    def test_e_use_false_does_not_gate_or_receive_commands(self):
         self.start_active_alignment()
         self.align_success()
         self.home_active()
         self.assertFalse(self.sm.legs[13].connected)
         self.assertTrue(self.sm.handle_run_request())
         run_ids = [m.arbitration_id for m in self.bus.sent if 0x600 <= m.arbitration_id < 0x618]
-        self.assertEqual(list(range(0x600, 0x618)), run_ids)
+        self.assertEqual([0x60A, 0x60B, 0x60C], run_ids)
         before = len(self.bus.sent)
         msg = type("JointStateValue", (object,), {"position": [0.0] * 24})()
         self.sm.coordinate_callback(msg)
-        self.assertEqual(list(range(0x400, 0x418)),
+        self.assertEqual([0x40A, 0x40B, 0x40C],
                          [m.arbitration_id for m in self.bus.sent[before:]])
 
     def test_f_expired_old_alignment_result_is_rejected(self):
