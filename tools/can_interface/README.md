@@ -27,7 +27,7 @@ The UI `Use` checkbox is the active joint selection for normal operation. There 
 - `Use=True` means the joint participates in ALIGN, HOME, and RUN safety gates.
 - `Use=False` is excluded from those gates and never receives an ALIGN-start request.
 - RUN is rejected when no joints are active.
-- Legacy normal RUN start and `/cmdForJetson.position` remain all-24-axis fan-out. The selected-axis diagnostic path is the only single-axis RUN/position path.
+- Normal RUN and `/cmdForJetson.position` send CAN frames only to Use=True axes. The JointState position vector is always 24 elements.
 - `/cmdForJetson.position` must contain 24 rad values so joint indexes remain stable.
 - STOP remains a global stop and sets `is_run=False` regardless of the active joint set.
 
@@ -56,22 +56,9 @@ Before any hardware trial, read:
 
 These documents define the current pretest status, execution path, Use=True semantics, staged hardware procedure, and explicit prohibitions.
 
-## External selected-axis diagnostic input
+## Position command input
 
-The existing /cmdForJetson JointState input remains the legacy 24-axis production stream and cannot represent selected-axis Diagnostic RUN. Selected-axis offline or suspended-robot diagnostics use /can/axis_command with std_msgs/String:
-
-- diagnostic_run:<axis>
-- position:<axis>:<absolute_rad>
-- position_offset:<axis>:<offset_from_diagnostic_q0_rad>
-- stop
-
-Both /ui/leg_command and /can/axis_command converge at StateMachine.submit_axis_command. CAN IDs, payloads, Use/session/error gates, position limits, and logical q0 are owned by StateMachine. The external helper publish_single_axis_external_test.py publishes only ROS commands and never opens SocketCAN.
-
-Example:
-
-    python tools/can_interface/publish_single_axis_external_test.py --axis 11 --direction plus
-
-For axis 11, successful execution sends one 0x60B Diagnostic RUN frame followed by 0x40B position frames only. It does not send a new 0x00B ALIGN request.
+Production position input is only `/cmdForJetson` (`sensor_msgs/JointState`, 24 rad values). Use=True controls RUN and position CAN fan-out. UI Diagnostic RUN and motion check continue through `/ui/leg_command`; CAN IDs, payloads, Use/session/error gates, position limits, and logical q0 remain owned by StateMachine.
 
 ## SocketCAN multi-actuator emulator
 

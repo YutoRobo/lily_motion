@@ -116,7 +116,7 @@ class StateMachine(object):
 
     Subscribe:
       - /ui/leg_command (String)    ex) "use:3:1", "align:3", "home_move:3:-1", "set_home:3", "home_step:0.002", "run", "stop"
-      - /cmdForJetson (JointState)  24要素位置指令（RUN成立後、旧仕様どおり全軸送信）
+      - /cmdForJetson (JointState)  24要素位置指令（RUN成立後、Use=True軸のみ送信）
 
     Publish:
       - /ui/leg_status (String)     ex) "3,Connected"
@@ -128,7 +128,7 @@ class StateMachine(object):
         # 脚テーブル
         self.legs = [LegInfo(i) for i in range(NUM_LEGS)]
 
-        # UI Use=True の初期化・HOME・RUN成立判定対象。通常CAN送信は全軸。
+        # UI Use=True の初期化・HOME・RUN成立判定・CAN送信対象。
         self.active_joints = set()
 
         # RUNモード
@@ -169,11 +169,11 @@ class StateMachine(object):
         self.diagnostic_status_pub = rospy.Publisher(
             "/ui/diagnostic_status", String, queue_size=20)
         rospy.Subscriber("/ui/leg_command", String, self.ui_command_callback)
-        rospy.Subscriber("/can/axis_command", String,
-                         self.external_axis_command_callback)
         rospy.Subscriber("/cmdForJetson", JointState, self.coordinate_callback)
 
-        rospy.loginfo("StateMachine initialized. Listening /ui/leg_command, /can/axis_command, /cmdForJetson.")
+        rospy.loginfo(
+            "StateMachine initialized. Listening /ui/leg_command and "
+            "/cmdForJetson; CAN fan-out follows Use=True axes.")
 
     # =========================================================
     # CAN helpers
@@ -192,7 +192,7 @@ class StateMachine(object):
             return False
 
     def encode_float_to_bytes(self, fval):
-        return list(struct.pack('<f', float(fval)))
+        return list(bytearray(struct.pack('<f', float(fval))))
 
     # ---- CAN commands
     def send_alignment_request(self, leg_id):
@@ -215,11 +215,14 @@ class StateMachine(object):
         return self._send_can_message(can_id, [0] * 8)
 
     def send_run_start_command(self):
-        # Use controls the PC gate, not legacy command fan-out.
-        rospy.loginfo("[CAN] Run start all axes")
+        active = self._active_joint_ids()
+        if not active:
+            rospy.logwarn("[CAN] RUN start rejected: no active joints")
+            return False
+        rospy.loginfo("[CAN] Run start active_joints=%s", active)
         ok = True
-        for i in range(NUM_LEGS):
-            ok = self._send_can_message(0x600 + i, [0] * 8) and ok
+        for axis in active:
+            ok = self._send_can_message(0x600 + axis, [0] * 8) and ok
         return ok
 
     def _position_command_data(self, position_rad):
@@ -239,12 +242,16 @@ class StateMachine(object):
         return True
 
     def send_position_command_all(self, positions):
-        """Existing legacy all-axis stream; updates each successful logical q."""
+        """Send a 24-element command to Use=True axes only."""
         if positions is None or len(positions) != NUM_LEGS:
             rospy.logwarn("[CAN] Position command length invalid (ID=0x400+i)")
             return False
+        active = self._active_joint_ids()
+        if not active:
+            rospy.logwarn("[CAN] Position command ignored: no active joints")
+            return False
         ok = True
-        for i in range(NUM_LEGS):
+        for i in active:
             sent = self._send_can_message(
                 0x400 + i, self._position_command_data(positions[i]))
             if sent:
@@ -395,35 +402,6 @@ class StateMachine(object):
             return
 
         rospy.logwarn("[UI] unknown command: %s", s)
-
-    def external_axis_command_callback(self, msg):
-        """Parse the external single-axis diagnostic command protocol.
-
-        /can/axis_command String formats:
-          diagnostic_run:<axis>
-          position:<axis>:<absolute_rad>
-          position_offset:<axis>:<offset_from_diagnostic_q0_rad>
-          stop
-        """
-        text = msg.data.strip()
-        if text == "stop":
-            self.submit_axis_command("external", None, "stop")
-            return
-        parts = text.split(":")
-        try:
-            command_type = parts[0]
-            axis = int(parts[1])
-            value = float(parts[2]) if len(parts) == 3 else None
-        except Exception:
-            rospy.logwarn("[EXTERNAL] invalid axis command: %s", text)
-            return
-        if ((command_type == "diagnostic_run" and len(parts) != 2)
-                or (command_type in ("position", "position_offset")
-                    and len(parts) != 3)):
-            rospy.logwarn("[EXTERNAL] invalid axis command: %s", text)
-            return
-        self.submit_axis_command(
-            "external", axis, command_type, value=value)
 
     def _parse_active_flag(self, s):
         v = s.strip().lower()
@@ -639,13 +617,15 @@ class StateMachine(object):
         return True
 
     def _position_limit_violation_all(self, positions):
-        for i in range(NUM_LEGS):
+        for i in self._active_joint_ids():
             joint_index = i % 3
             lo, hi = JOINT_LIMITS_RAD[joint_index]
             try:
                 v = float(positions[i])
             except Exception:
                 return "position[%d] is not numeric" % i
+            if math.isnan(v) or math.isinf(v):
+                return "position[%d] is non-finite" % i
             if v < lo or v > hi:
                 return "position[%d] %s %.6f rad outside [%.6f, %.6f]" % (
                     i, JOINT_NAMES[joint_index], v, lo, hi)
@@ -1106,7 +1086,7 @@ class StateMachine(object):
     def coordinate_callback(self, msg):
         """
         /cmdForJetson (JointState)
-        RUN中は旧仕様どおり全軸へ送信する。positionは24要素必須。
+        RUN中はUse=True軸のみへ送信する。positionは24要素必須。
         """
         self.last_external_position_command_time = time.time()
         if self.motion_check_active:

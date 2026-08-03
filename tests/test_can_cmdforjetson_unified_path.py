@@ -64,7 +64,7 @@ class FakeBus(object):
         self.sent.append(msg)
 
 
-def load_unified_state_machine():
+def load_state_machine():
     fake_rospy = FakeRospy()
     fake_can = FakeCan("can")
     std_msgs = types.ModuleType("std_msgs")
@@ -83,7 +83,6 @@ def load_unified_state_machine():
     }
     old_modules = dict((name, sys.modules.get(name))
                        for name in replacements)
-    old_state_machine = sys.modules.get("state_machine")
     old_paths = list(sys.path)
     try:
         sys.path.insert(0, CAN_DIR)
@@ -91,11 +90,8 @@ def load_unified_state_machine():
         for name, module in replacements.items():
             sys.modules[name] = module
         base = imp.load_source(
-            "state_machine", os.path.join(STATE_DIR, "state_machine.py"))
-        sys.modules["state_machine"] = base
-        unified = imp.load_source(
-            "unified_state_machine_under_test",
-            os.path.join(STATE_DIR, "unified_state_machine.py"))
+            "cmdforjetson_state_machine_under_test",
+            os.path.join(STATE_DIR, "state_machine.py"))
     finally:
         sys.path[:] = old_paths
         for name, previous in old_modules.items():
@@ -103,23 +99,23 @@ def load_unified_state_machine():
                 sys.modules.pop(name, None)
             else:
                 sys.modules[name] = previous
-        if old_state_machine is None:
-            sys.modules.pop("state_machine", None)
-        else:
-            sys.modules["state_machine"] = old_state_machine
 
-    # Python 2.7's imp.load_source can reuse a module object whose globals were
-    # affected when sys.modules entries are restored. Pin the imported modules
-    # to the test doubles explicitly so each test instance remains isolated.
+    # Keep the exact module objects imported by the loaded code alive.
+    # Python 2.7 imp.load_source() is unsafe here when the same module name is
+    # reloaded per test while sys.modules is restored between those reloads.
     base.rospy = fake_rospy
     base.can = fake_can
-    unified.rospy = fake_rospy
-    return unified, fake_rospy
+    return base, fake_rospy
 
 
 class UnifiedCmdForJetsonStateMachineTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module, cls.rospy = load_state_machine()
+
     def setUp(self):
-        self.module, self.rospy = load_unified_state_machine()
+        self.rospy.logs[:] = []
+        self.rospy.subscribers[:] = []
         self.bus = FakeBus()
         self.sm = self.module.StateMachine(self.bus)
         self.assertTrue(self.sm.handle_use_selection(10, True))
@@ -162,13 +158,15 @@ class UnifiedCmdForJetsonStateMachineTest(unittest.TestCase):
         self.assertEqual([0x40A],
                          [message.arbitration_id for message in self.bus.sent])
 
-    def test_direct_legacy_callback_is_rejected(self):
-        msg = type("StringValue", (object,), {"data": "position:10:0.01"})()
-        self.assertFalse(self.sm.external_axis_command_callback(msg))
+    def test_invalid_position_frames_are_rejected(self):
+        self.sm.is_run = True
+        for positions in ([0.0] * 23,
+                          [0.0] * 10 + [float("nan")] + [0.0] * 13,
+                          [0.0] * 10 + [float("inf")] + [0.0] * 13,
+                          [0.0] * 10 + [2.0] + [0.0] * 13):
+            msg = type("JointStateValue", (object,), {"position": positions})()
+            self.sm.coordinate_callback(msg)
         self.assertEqual([], self.bus.sent)
-        self.assertTrue(any(
-            "external axis command ignored" in text
-            for level, text in self.rospy.logs if level == "warn"))
 
 
 class SingleAxisPublisherPureTest(unittest.TestCase):

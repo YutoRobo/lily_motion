@@ -4,7 +4,7 @@ import argparse
 import os
 import rospy
 import can
-from unified_state_machine import StateMachine
+from state_machine import StateMachine
 
 # sudo ip link set can0 up type can bitrate 500000
 # sudo ip link set can0 up

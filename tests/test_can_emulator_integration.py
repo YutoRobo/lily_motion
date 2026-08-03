@@ -132,28 +132,6 @@ class MultiActuatorIntegrationTest(unittest.TestCase):
         self.assertFalse(leg.run_command_sent_in_current_session)
         self.assertFalse(bridge.sm.is_run)
 
-    def test_n_external_single_axis_without_ui(self):
-        bridge = CanBridge((11,))
-        bridge.discover()
-        bridge.align()
-        bridge.home_all()
-        bridge.sm.external_axis_command_callback(
-            FrameMessage("diagnostic_run:11"))
-        bridge.drain_pc_to_emulator(bridge.base + 1.1)
-        for offset in (0.005, 0.010, 0.015, 0.020,
-                       0.015, 0.010, 0.005, 0.000):
-            bridge.sm.external_axis_command_callback(
-                FrameMessage("position_offset:11:%.3f" % offset))
-            bridge.drain_pc_to_emulator(bridge.base + 1.2 + offset)
-        ids = [m.arbitration_id for m in bridge.pc_bus.sent]
-        diagnostic_ids = [
-            value for value in ids
-            if 0x600 <= value <= 0x617 or 0x400 <= value <= 0x417]
-        self.assertEqual([0x60B] + [0x40B] * 8, diagnostic_ids)
-        self.assertNotIn(0x00B, diagnostic_ids)
-        self.assertAlmostEqual(
-            0.0, bridge.emulator.actuators[11].last_position_command_rad)
-
     def test_o_24_axis_normal_position_fanout(self):
         bridge = CanBridge(range(24))
         bridge.discover()
