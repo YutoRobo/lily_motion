@@ -107,6 +107,13 @@ def load_unified_state_machine():
             sys.modules.pop("state_machine", None)
         else:
             sys.modules["state_machine"] = old_state_machine
+
+    # Python 2.7's imp.load_source can reuse a module object whose globals were
+    # affected when sys.modules entries are restored. Pin the imported modules
+    # to the test doubles explicitly so each test instance remains isolated.
+    base.rospy = fake_rospy
+    base.can = fake_can
+    unified.rospy = fake_rospy
     return unified, fake_rospy
 
 
