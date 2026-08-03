@@ -1,6 +1,6 @@
 # Lily 8脚ロボット コマンド集
 
-更新日: 2026-08-03  
+更新日: 2026-08-04
 対象リポジトリ:
 
 ```bash
@@ -284,13 +284,15 @@ python tools/can_interface/initUI/ui.py
 
 ## 5.2 基本操作順
 
+通常の単軸位置試験はDiagnostic RUN専用経路ではなく、通常RUNと本番の`/cmdForJetson`経路を使用する。axis10の場合の順序は次のとおり。
+
 ```text
 Connected確認
-→ Use設定
+→ axis10だけUse=True
 → ALIGN
-→ HOME
-→ Diagnostic RUN または RUN ALL AXES
-→ 外部指令／動作確認
+→ SET HOME
+→ RUN
+→ publish_cmdforjetson_single_axis_test.py
 → STOP
 ```
 
@@ -307,104 +309,168 @@ Connected確認
 
 ---
 
-# 6. 外部publisherによる単軸診断
+# 6. `/cmdForJetson`による単軸試験
 
-## 6.1 正方向へ小振幅往復
-
-**[確認済み: FakeBus]**  
-**[要実機axis10確認]**
-
-例: axis11
-
-```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
-
-python tools/can_interface/publish_single_axis_external_test.py \
-  --axis 11 \
-  --direction plus
-```
-
-例: 実機axis10
-
-```bash
-python tools/can_interface/publish_single_axis_external_test.py \
-  --axis 10 \
-  --direction plus
-```
-
-## 6.2 負方向へ小振幅往復
-
-```bash
-python tools/can_interface/publish_single_axis_external_test.py \
-  --axis 10 \
-  --direction minus
-```
-
-標準指令:
-
-- 0.005 rad刻み
-- 最大0.020 rad
-- 100 ms周期
-- 最終的にDiagnostic RUN開始時のq0へ復帰
-
-期待CAN ID（axis10）:
-
-```text
-Diagnostic RUN: 0x60A
-Position:       0x40A
-```
-
-動作確認中に新しい`0x00A`が送信されてはいけない。
-
----
-
-# 7. 外部単軸指令のROS入力形式
+## 6.1 正式経路と前提
 
 **[確認済み]**
 
-Topic:
+正式な単軸試験publisherは次である。
 
 ```text
-/can/axis_command
+tools/publish_cmdforjetson_single_axis_test.py
+→ /cmdForJetson
+→ StateMachine
+→ Use=Trueの対象軸
+→ 0x400 + axis番号
 ```
 
-Message:
+publisherはCANを直接開かず、ALIGN、HOME、RUN、STOPも発行しない。これらは通常の`/ui/leg_command`またはUIから実施する。実行前に、Connected確認、対象軸だけUse=True、ALIGN、SET HOME、RUNまで完了させる。試験終了後は必ずSTOPする。
+
+## 6.2 `--direction`の意味
+
+`--direction plus`は各関節の論理角度座標を次の順で往復する。
 
 ```text
-std_msgs/String
+center_rad
+→ center_rad + amplitude_rad
+→ center_rad
 ```
 
-受付形式:
+`--direction minus`は次の順で往復する。
 
 ```text
-diagnostic_run:<axis>
-position:<axis>:<absolute_rad>
-position_offset:<axis>:<diagnostic_run時q0からのoffset_rad>
-stop
+center_rad
+→ center_rad - amplitude_rad
+→ center_rad
 ```
 
-例:
+`center_rad=0.0`の場合は次のとおり。
+
+```text
+plus:  0 → +amplitude → 0 rad
+minus: 0 → -amplitude → 0 rad
+```
+
+plus/minusはロボット空間における上、下、前、後を直接意味しない。あくまで各関節の論理角度座標における正方向、負方向である。実際の見た目の回転方向は、脚番号、関節種別、URDFのjoint axis、アクチュエータ取付方向および符号定義に依存する。
+
+## 6.3 axis10の小振幅正方向試験
+
+実機初回はこの`amplitude_rad=0.002`から開始する。
 
 ```bash
-rostopic pub -1 /can/axis_command std_msgs/String \
-  "data: 'diagnostic_run:10'"
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 \
+  --direction plus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
 ```
+
+指令列:
+
+```text
+0.000
+0.001
+0.002
+0.001
+0.000 rad
+```
+
+## 6.4 axis10の小振幅負方向試験
+
+正方向の小振幅試験が正常だった場合だけ実施する。
 
 ```bash
-rostopic pub -1 /can/axis_command std_msgs/String \
-  "data: 'position_offset:10:0.005'"
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 \
+  --direction minus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
 ```
+
+指令列:
+
+```text
+0.000
+-0.001
+-0.002
+-0.001
+0.000 rad
+```
+
+## 6.5 振幅0.005 radの段階試験
+
+0.002 radの正負方向がともに正常だった場合だけ、`--amplitude-rad 0.005 --step-rad 0.001`へ段階的に進む。その他の周期・hold条件は小振幅例と同じにする。
 
 ```bash
-rostopic pub -1 /can/axis_command std_msgs/String \
-  "data: 'stop'"
+python2 tools/publish_cmdforjetson_single_axis_test.py --axis 10 --direction plus \
+  --amplitude-rad 0.005 --step-rad 0.001 --period-sec 0.500 \
+  --start-hold-sec 1.000 --peak-hold-sec 1.000 --end-hold-sec 1.000
+
+python2 tools/publish_cmdforjetson_single_axis_test.py --axis 10 --direction minus \
+  --amplitude-rad 0.005 --step-rad 0.001 --period-sec 0.500 \
+  --start-hold-sec 1.000 --peak-hold-sec 1.000 --end-hold-sec 1.000
 ```
 
-注意:
+## 6.6 publisher標準値
 
-- PositionはUse、Connected、Aligned、Homed、RUN送信済み、q0既知などの安全条件をStateMachineで確認する
-- `rostopic pub`による単発指令は診断用
-- 回転動作の正式経路には使用しない
+```text
+center_rad       = 0.0
+amplitude_rad    = 0.020
+step_rad         = 0.005
+period_sec       = 0.100
+start_hold_sec   = 0.500
+peak_hold_sec    = 0.500
+end_hold_sec     = 0.500
+```
+
+実機初回試験では標準振幅0.020 radをそのまま使用せず、`amplitude_rad=0.002`から開始する。
+
+## 6.7 実機試験の安全条件
+
+- 機体または対象脚を浮かせる
+- axis10以外をUse=Falseにする
+- 非常停止をすぐ操作できる状態にする
+- 可動範囲へ人を入れない
+- 最初は0.002 radから開始する
+- 正方向が正常な場合のみ負方向へ進む
+- 異音、衝撃、別軸動作、原点未復帰、`0x0EE`受信時は中止する
+- 試験終了後は必ずSTOPする
+
+---
+
+# 7. `/cmdForJetson`のROS入力形式
+
+**[確認済み]**
+
+```text
+Topic:      /cmdForJetson
+Message:    sensor_msgs/JointState
+position:   常に24要素
+対象軸:     有限値
+対象外軸:   NaN
+```
+
+StateMachineはUse=True軸だけを検証し、CANへ送る。意図しない別軸がUse=Trueの場合、その軸のNaNにより位置指令フレーム全体をCAN送信前に拒否する。
+
+axis10のCAN ID:
+
+```text
+ALIGN:      0x00A
+SET HOME:   0x30A
+RUN:        0x60A
+POSITION:   0x40A
+```
+
+RUN開始後の往復位置指令中に`0x40A`だけが繰り返し出ることは正常である。`0x60A`はRUN開始時に送信するもので、各位置指令周期には再送しない。
 
 ---
 
@@ -463,19 +529,51 @@ Terminal 5:
 ```text
 UI起動
 → Connected確認
-→ Use確認
+→ axis10だけUse=True（axis11,12はUse=False）
 → ALIGN
-→ axis11だけ再ALIGN
-→ HOME
-→ axis11 Diagnostic RUN
+→ SET HOME
+→ RUN
+→ /cmdForJetson単軸publisher
+→ STOP
 ```
 
-外部publisher:
+単軸axis10 publisherを使う場合:
 
 ```bash
-python tools/can_interface/publish_single_axis_external_test.py \
-  --axis 11 \
-  --direction plus
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 \
+  --direction plus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001
+```
+
+## 8.2 確認済み結果
+
+### vcan単軸axis10
+
+```text
+RUN 0x60A = 1フレーム
+POSITION 0x40A = 11フレーム
+予期しないRUN/POS ID = なし
+0.000 → 0.010 → 0.000 rad
+PASS
+```
+
+### vcan複数軸axis10,11,12
+
+```text
+RUN = 0x60A, 0x60B, 0x60C
+POSITION = 0x40A, 0x40B, 0x40C
+1つの24要素JointStateから3軸へ正常にファンアウト
+PASS
+```
+
+### 実機axis10
+
+```text
++0.002 radの小振幅往復は目視上問題なし
+axis10のPOSITIONは0x40A
+実機の負方向および複数実アクチュエータ同期は別途確認項目
 ```
 
 ---
@@ -648,72 +746,40 @@ violation_count: 198 → 0
 
 # 13. CAN関連テスト
 
-## 13.1 Diagnostic RUNテスト
+**[確認済み]**
+
+## 13.1 unified `/cmdForJetson`経路
 
 ```bash
-pytest -q tests/test_can_diagnostic_run.py
+python2 tests/test_can_cmdforjetson_unified_path.py
 ```
-
-過去結果:
 
 ```text
-10/10 PASS
+focused unified-path tests: 10/10 PASS
 ```
 
-## 13.2 外部単軸指令テスト
+## 13.2 安全機能・エミュレータ回帰
 
 ```bash
-pytest -q tests/test_can_external_axis_command.py
+python2 tests/test_can_diagnostic_run.py
+python2 tests/test_can_emulator_integration.py
+python2 tests/test_can_legacy_alignment_retry.py
+python2 tests/test_can_multi_actuator_emulator.py
 ```
 
-過去結果:
-
-```text
-9/9 PASS
-```
-
-## 13.3 エミュレータテスト
+## 13.3 CAN関連全テスト
 
 ```bash
-pytest -q \
-  tests/test_can_multi_actuator_emulator.py \
-  tests/test_can_emulator_integration.py
+python2 -m unittest discover -s tests -p "test_can_*.py"
 ```
 
-過去結果:
+検証済み結果:
 
 ```text
-18/18 PASS
-```
-
-## 13.4 CAN関連全テスト
-
-**[要確認: 現行のテスト選択式]**
-
-候補:
-
-```bash
-pytest -q tests -k 'can'
-```
-
-過去結果:
-
-```text
-81/81 PASS
-```
-
-## 13.5 リポジトリ全体
-
-```bash
-pytest -q
-```
-
-過去結果:
-
-```text
-132件中121件PASS
-11件はnumpy、sympy、matplotlib不足による既存依存エラー
-CAN関連失敗: 0
+all CAN tests: 81/81 PASS
+Python 2.7 syntax: PASS
+Python 3 syntax: PASS
+git diff --check: PASS
 ```
 
 ---
@@ -765,46 +831,64 @@ python2 -m py_compile \
 
 ---
 
-# 15. 実機axis10の単軸外部試験
+# 15. 実機axis10の`/cmdForJetson`単軸試験
 
-**[要実機確認]**
+**[確認済み: +0.002 rad正方向]**
 
-## 15.1 前提
+**[要実機確認: 負方向、複数実アクチュエータ同期]**
 
-- ロボットを浮かせる
-- 外部位置publisherを停止
-- axis10をUse=True
-- 新規セッション
-- Connected
-- ALIGN
-- HOME
-- 通常の`RUN ALL AXES`を押さない
-- UIのmotion check専用ボタンを押さない
+## 15.1 前提と安全条件
+
+- 機体または対象脚を浮かせる
+- axis10以外をUse=Falseにする
+- 非常停止をすぐ操作できる状態にする
+- 可動範囲へ人を入れない
+- 最初は0.002 radから開始する
+- 正方向が正常な場合のみ負方向へ進む
+- 異音、衝撃、別軸動作、原点未復帰、`0x0EE`受信時は中止する
+- 試験終了後は必ずSTOPする
+
+操作順:
+
+```text
+Connected確認
+→ axis10だけUse=True
+→ ALIGN
+→ SET HOME
+→ RUN
+→ publish_cmdforjetson_single_axis_test.py
+→ STOP
+```
+
+Diagnostic RUN専用経路ではなく、通常RUNと本番の`/cmdForJetson`経路を使用する。
 
 ## 15.2 CANログ
 
 ```bash
-candump -L can0 | tee /tmp/axis10_external_test.log
+candump -L can0 | tee /tmp/axis10_cmdforjetson_test.log
 ```
 
-## 15.3 外部publisher
+## 15.3 小振幅publisher
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
-
-python tools/can_interface/publish_single_axis_external_test.py \
+python2 tools/publish_cmdforjetson_single_axis_test.py \
   --axis 10 \
-  --direction plus
+  --direction plus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
 ```
 
 ## 15.4 合格条件
 
 ```text
-0x60AだけDiagnostic RUN
-0x40AだけPosition
-publisher開始後に新しい0x00Aなし
-軸10だけが往復
-最終的にq0へ復帰
+RUN開始時に0x60Aだけ
+位置指令周期には0x40Aだけ
+axis10だけが往復
+最終的にcenter_radへ復帰
 0x0EEなし
 pc_send_errorなし
 can_interface_errorなし
@@ -926,9 +1010,10 @@ vcan0作成
 → Connected
 → Use
 → ALIGN
-→ HOME
-→ Diagnostic RUN
-→ 外部単軸publisher
+→ SET HOME
+→ RUN
+→ /cmdForJetson publisher
+→ STOP
 ```
 
 ## 18.2 ALIGN失敗と再試行を確認したい
@@ -988,21 +1073,29 @@ bash testdata/visual_near_contact_local_fix_candidate/candidate_022_wide/gazebo_
   normal
 ```
 
-## 18.6 実機axis10を外部指令で動かしたい
+## 18.6 実機axis10を`/cmdForJetson`で動かしたい
 
 ```text
-Connected
-→ Use=True
+Connected確認
+→ axis10だけUse=True
 → ALIGN
-→ HOME
-→ UIのmotion checkボタンは押さない
+→ SET HOME
+→ RUN
 ```
 
 ```bash
-python tools/can_interface/publish_single_axis_external_test.py \
+python2 tools/publish_cmdforjetson_single_axis_test.py \
   --axis 10 \
-  --direction plus
+  --direction plus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
 ```
+
+終了後は必ずUIからSTOPする。
 
 ---
 
