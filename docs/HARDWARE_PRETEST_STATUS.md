@@ -1,141 +1,275 @@
 # Hardware Pretest Status
 
-Current date: 2026-07-06
+更新日: 2026-08-04
 
-## Status Summary
+## 1. Status Summary
 
-The software integration from initial posture to CAN frame conversion is complete in mock testing:
+現行`master`では、回転歩容指令からROS、StateMachine、CANフレーム展開までのソフトウェア経路を統合済みである。
 
-`HOME [0,0,0] -> air-entry -> touchdown hold -> candidate02 roll -> /cmdForJetson -> tools/can_interface StateMachine -> CAN frame payload`
+```text
+歩容JSONL／単軸試験
+→ /cmdForJetson
+→ tools/can_interface StateMachine
+→ Use=True軸
+→ CAN RUN／POSITION
+```
 
-This is a software/mock PASS only. Hardware testing has not been performed.
+現在の判定:
 
-## Execution Target
+| 項目 | 状態 |
+|---|---|
+| Python単体・回帰試験 | PASS済み |
+| CAN FakeBus試験 | PASS |
+| vcan単軸axis10 | PASS |
+| vcan複数軸axis10,11,12 | PASS |
+| mock end-to-end | PASS |
+| Gazebo full roll | PASS |
+| 実機axis10 `+0.002 rad` | 暫定PASS |
+| 実機axis10負方向 | 未確認 |
+| 実機axis10 `+/-0.005 rad` | 未確認 |
+| 実機1脚3軸 | 未確認 |
+| 実機air-entry以降 | 未確認 |
+| 実機full roll | 未確認 |
 
-Use only:
+この文書でいう「暫定PASS」は、目視上問題がなかったことを示す。長時間動作、負荷、温度、再現性、複数軸同期まで保証するものではない。
+
+## 2. Maintained Execution Target
+
+現行の実行対象:
 
 - `tools/can_interface/statemachine/main.py`
 - `tools/can_interface/initUI/ui.py`
+- `tools/publish_cmdforjetson_single_axis_test.py`
 - `tools/publish_cmdforjetson_jsonl.py`
 
-Do not execute:
+実行してはならない旧経路:
 
 - `external/can_interface/260102_usb_can_fast_alignment/`
+- 削除済みの`/can/axis_command`位置指令経路
 
-`external/can_interface` is a legacy snapshot / pre-relocation reference only. It is not the maintained runtime path.
+`external/can_interface`は移設前スナップショット／参照用であり、現行実機経路ではない。
 
-## Files
+## 3. Production Position Command Path
 
-Canonical roll body, do not edit:
+本番位置指令入力は`/cmdForJetson`だけである。
 
-- `data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl`
+```text
+Topic: /cmdForJetson
+Message: sensor_msgs/JointState
+position length: exactly 24
+unit: rad
+```
 
-First hardware air-entry-only file:
+StateMachineは次を実施する。
 
-- `testdata/hardware_trial_air_entry_only/air_entry_and_hold_only_commands.jsonl`
+- RUN前の位置指令をCANへ送らない
+- `Use=True`軸だけを安全判定する
+- `Use=True`軸だけへ`0x400 + axis`を送る
+- 関節制限、非数、NaN、Inf、セッション、エラー状態を確認する
+- STOP後の位置指令をCANへ送らない
 
-Full staged sequence, final-stage only:
+単軸安全マスクpublisherでは、対象軸だけ有限値、対象外23軸をNaNとする。意図せず別軸が`Use=True`の場合、そのNaNによりフレーム全体が送信前に拒否される。
 
-- `testdata/entry_touchdown_roll_sequence/combined_with_hold_commands.jsonl`
+## 4. Current Reference Candidate
 
-End-to-end mock evidence:
+最新の凍結済みpre-hardware候補:
 
-- `testdata/end_to_end_initial_pose_to_roll_can_check/summary.json`
-- `testdata/end_to_end_initial_pose_to_roll_can_check/command_sequence_check.json`
-- `testdata/end_to_end_initial_pose_to_roll_can_check/phase_boundary_check.json`
-- `testdata/end_to_end_initial_pose_to_roll_can_check/use_all_24_can_check.json`
-- `testdata/end_to_end_initial_pose_to_roll_can_check/use_4_axis_can_check.json`
-- `testdata/end_to_end_initial_pose_to_roll_can_check/run_stop_gate_check.json`
-- `testdata/end_to_end_initial_pose_to_roll_can_check/hardware_limit_report.json`
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
+```
 
-## Mock End-to-End PASS Results
+主な状態:
 
-From `testdata/end_to_end_initial_pose_to_roll_can_check/summary.json`:
+- command count: `2233`
+- coxa: `0.075 m`
+- thigh: `0.300 m`
+- tibia: `0.300 m`
+- maximum second-joint angle: `94.8 deg`
+- second-joint violation count over `95 deg`: `0`
+- Gazebo full roll: `PASS`
+- strict command-log dry run: `PASS`
+- hardware full roll: not tested
 
-- total frames: 2368
-- air-entry: 120 frames
-- touchdown hold: 15 frames
-- candidate02 roll body: 2233 frames
-- all frames have 24 `joint_command_rad` values
-- hardware_limit_v2: PASS
-- `/cmdForJetson` equivalent stream into `tools/can_interface`: PASS
-- Use=True 0..23: every command frame emits `0x400..0x417`, 24 position CAN frames
-- Use=True 0,1,2,3: every command frame emits only `0x400..0x403`, 4 position CAN frames
-- Use=False axes emit 0 position CAN frames
-- before RUN: 0 position CAN frames
-- after RUN: position CAN frames are emitted
-- after STOP: position CAN frames stop
-- payload compare against representative `can_preview.jsonl`: 192/192 match
-- `can0_opened=false`
-- `hardware_can_sent=false`
-- `external_can_interface_executed=false`
+候補固有の段階順序:
 
-## Use=True Specification
+- [`../data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/pre_hardware_decision.md`](../data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/pre_hardware_decision.md)
 
-The UI `Use` checkbox is the active joint selection.
+旧`v3_0_42c_candidate_02_softlimit_94p8`は比較・履歴上の重要候補だが、現在の最初のpre-hardware候補ではない。
 
-- `Use=True` means active. ALIGN, HOME jog, SET HOME, RUN start, and RUN position frames are sent only to active joints.
-- `Use=False` means inactive. The joint is excluded from the RUN gate and receives no position CAN frame.
-- `/cmdForJetson.position` must still contain 24 rad values so indexes remain stable.
-- Hardware limits are enforced for active joints. Inactive out-of-limit values are ignored for CAN send and logged as warnings.
-- RUN is rejected if no joints are active.
-- Disconnected inactive joints do not block RUN.
+## 5. Staged Logs
 
-## CAN ID And Payload Specification
+### Air-entry and hold only
 
-- ALIGN request TX: `0x000 + joint_index`
-- ALIGN result RX: `0x100 + joint_index`
-- HOME jog TX: `0x200 + joint_index`
-- SET HOME TX: `0x300 + joint_index`
-- position command TX: `0x400 + joint_index`
-- RUN start TX: `0x600 + joint_index`
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
+  staged/air_entry_and_hold_only_commands.jsonl
+```
+
+- `135` frames
+- air-entry and hold only
+- no roll-body frames
+
+### Split roll logs
+
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/
+  roll_0_50_commands.jsonl
+  roll_50_100_commands.jsonl
+  roll_100_300_commands.jsonl
+  roll_300_end_commands.jsonl
+```
+
+### Final full sequence
+
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
+  staged/combined_with_hold_commands.jsonl
+```
+
+- `2368` frames
+- air-entry + hold + complete roll body
+- final confirmation only
+
+## 6. Verified CAN Results
+
+### 6.1 CAN unit tests
+
+Verified result:
+
+```text
+focused unified-path tests: 10/10 PASS
+all CAN tests: 81/81 PASS
+Python 2.7 syntax: PASS
+Python 3 syntax: PASS
+git diff --check: PASS
+```
+
+Representative tests:
+
+```text
+tests/test_can_cmdforjetson_unified_path.py
+tests/test_can_diagnostic_run.py
+tests/test_can_emulator_integration.py
+tests/test_can_legacy_alignment_retry.py
+tests/test_can_multi_actuator_emulator.py
+```
+
+### 6.2 vcan axis10
+
+```text
+RUN 0x60A: 1 frame
+POSITION 0x40A: 11 frames
+unexpected RUN/POS IDs: none
+command: 0.000 → 0.010 → 0.000 rad
+result: PASS
+```
+
+### 6.3 vcan axis10,11,12
+
+```text
+RUN: 0x60A, 0x60B, 0x60C
+POSITION: 0x40A, 0x40B, 0x40C
+one 24-element JointState was fanned out to three selected axes
+result: PASS
+```
+
+This proves software fan-out. It does not prove simultaneous physical response or 24-unit bus behavior.
+
+## 7. Verified Hardware Result
+
+Real actuator axis10:
+
+```text
+direction: plus
+amplitude: 0.002 rad
+path: /cmdForJetson → StateMachine → 0x40A
+visual result: no obvious abnormality
+status: provisional PASS
+```
+
+The following remain unverified:
+
+- negative `0.002 rad`
+- positive and negative `0.005 rad`
+- repeatability
+- one-leg three-axis operation
+- multiple real actuator operation
+- current, sound, vibration, temperature under sustained motion
+
+## 8. CAN Protocol Summary
+
+- connection/standby heartbeat RX: `0x0FF`
+- ALIGN request TX: `0x000 + axis`
+- ALIGN result RX: `0x100 + axis`
+- HOME jog TX: `0x200 + axis`
+- SET HOME TX: `0x300 + axis`
+- position command TX: `0x400 + axis`
+- RUN start TX: `0x600 + axis`
 - position payload: `[0,0,0,0] + little-endian float32(rad)`
-- position unit: rad
 
-## Touchdown Offset Policy
+`0x0FF` is a standby discovery heartbeat. It is not required to continue after successful ALIGN.
 
-Touchdown offset is not encoded into joint commands. It is an operational base/floor height margin while lowering the robot to the floor at the hold posture.
+## 9. Use=True Specification
 
-- analytical minimum pass: +0.013 m
-- recommended operational value: +0.015 m
-- first hardware trial option: +0.020 m
+- `Use=True` is the active-axis selection.
+- ALIGN, HOME, SET HOME, RUN, and POSITION are restricted by Use selection and session gates.
+- RUN is rejected when no axis is active.
+- RUN is accepted only when all active axes are aligned and homed in the current session.
+- `Use=False` axes receive no RUN or POSITION frame.
+- disconnected inactive axes do not block RUN.
 
-For the first hardware touchdown, use the +0.020 m equivalent safety option.
+## 10. Mock End-to-End Evidence
 
-## Confirmed Software Safety Checks
+Existing mock evidence includes:
 
-- hardware_limit_v2 PASS for `combined_with_hold_commands.jsonl`
-- RUN gate obeys Use=True active joint selection
-- RUN before `/cmdForJetson` emits no position frames
-- STOP sets `is_run=False` and stops subsequent position conversion
-- `tools/can_interface` is the execution target
-- `external/can_interface` was not executed during mock checks
-- `can0` was not opened during mock checks
-- no hardware CAN was sent during mock checks
+```text
+testdata/end_to_end_initial_pose_to_roll_can_check/summary.json
+testdata/end_to_end_initial_pose_to_roll_can_check/command_sequence_check.json
+testdata/end_to_end_initial_pose_to_roll_can_check/phase_boundary_check.json
+testdata/end_to_end_initial_pose_to_roll_can_check/use_all_24_can_check.json
+testdata/end_to_end_initial_pose_to_roll_can_check/use_4_axis_can_check.json
+testdata/end_to_end_initial_pose_to_roll_can_check/run_stop_gate_check.json
+testdata/end_to_end_initial_pose_to_roll_can_check/hardware_limit_report.json
+```
 
-## Hardware-Dependent Items Not Yet Verified
+These results were created for the earlier candidate02 sequence and remain evidence for the `/cmdForJetson` and StateMachine conversion path. They are not a substitute for hardware validation of the current v3.0.44 candidate.
 
-Hardware testing has not been performed. These remain unverified on real units:
+## 11. Required Hardware Test Order
 
-- real CAN bus TX/RX
-- real unit ACK/response behavior
-- ALIGN real response
-- HOME direction
-- final real posture after SET HOME
-- small-angle hardware motion
-- air-entry hardware motion
-- touchdown hardware contact and clearance
-- candidate02 roll body hardware motion
-- current, sound, vibration, heat, and mechanical interference under load
+```text
+axis10 negative 0.002 rad
+→ axis10 positive/negative 0.005 rad
+→ one complete leg, three axes
+→ air-entry and hold only
+→ touchdown confirmation
+→ roll 0–50
+→ roll 50–100
+→ roll 100–300
+→ roll 300–end
+→ combined full sequence
+```
 
-## Required Hardware Test Order
+Full sequence must remain last.
 
-Do not start with the full combined file. The sequence must be:
+## 12. Hardware-Dependent Items Still Open
 
-1. small-angle test
-2. air-entry + touchdown hold only
-3. touchdown contact confirmation
-4. short roll segment
-5. full roll final confirmation
+- real CAN behavior with several and 24 installed units
+- ACK and reset behavior of actual MCU firmware
+- HOME direction for every axis
+- SET HOME posture and repeatability
+- physical joint sign mapping
+- multi-axis timing and bus load
+- air-entry clearance
+- touchdown contact and support stability
+- staged roll contact, current, sound, vibration, heat, and interference
+- full roll motion
+- Jetson Orin CPU load, temperature, and scheduling jitter during sustained operation
 
-Initial hardware test must not run `testdata/entry_touchdown_roll_sequence/combined_with_hold_commands.jsonl`.
+## 13. Safety Decision
+
+Software pretest has progressed beyond mock-only status, but the system is not approved for full roll. The next approved action is still a small-angle single-axis test, followed by one-leg testing.
+
+Detailed operation:
+
+- [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md)
+- [`Lily_8leg_Robot_Command_Reference.md`](Lily_8leg_Robot_Command_Reference.md)
