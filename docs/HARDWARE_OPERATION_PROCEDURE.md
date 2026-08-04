@@ -1,100 +1,173 @@
 # Hardware Operation Procedure
 
-Current date: 2026-07-06
+更新日: 2026-08-04
 
-This document is intentionally explicit. Follow it in order. Do not skip directly to roll.
+この文書は、現行`master`でLily 8脚ロボットを段階的に確認するための実機操作手順である。順序を飛ばしてfull rollへ進んではならない。
 
 ## 1. Core Rules
 
-- `can0` must not be opened during dry-run, mock, documentation, or pretest checks.
-- Hardware CAN must not be sent unless the operator is intentionally performing a hardware trial.
-- `external/can_interface` is legacy reference only. Do not execute it.
-- The only CAN execution target is `tools/can_interface/`.
-- `data/reference_candidates` is the canonical source area. Do not edit it.
-- Initial hardware trial must not stream `combined_with_hold_commands.jsonl`.
-- Test order is: small-angle test -> air-entry only -> touchdown -> short roll -> full roll.
+- dry-run、mock、vcan試験では`can0`を開かない。
+- 実機CAN送信は、操作者が意図して実機試験を行う場合だけ許可する。
+- 現行CAN実行対象は`tools/can_interface/`だけである。
+- `external/can_interface/`を実行しない。
+- 本番位置指令入力は`/cmdForJetson`だけである。
+- 削除済みの`/can/axis_command`経路を使用しない。
+- `data/reference_candidates/`の正式候補を直接編集しない。
+- 対象外軸は`Use=False`にする。
+- 実機単軸試験では機体または対象脚を浮かせる。
+- 非常停止またはUI STOPを直ちに操作できる状態にする。
+- full sequenceは全段階の最後にだけ実施する。
 
-## 2. File Structure
+## 2. Current Status And Next Stage
 
-Runtime code:
+2026-08-04時点:
 
-- `tools/can_interface/statemachine/main.py`
-- `tools/can_interface/initUI/ui.py`
-- `tools/publish_cmdforjetson_jsonl.py`
+```text
+vcan axis10 single-axis: PASS
+vcan axis10,11,12 fan-out: PASS
+real axis10 +0.002 rad: provisional PASS
+```
 
-Canonical roll body, read-only:
+次の実機確認順:
 
-- `data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl`
+```text
+axis10 negative 0.002 rad
+→ axis10 positive/negative 0.005 rad
+→ one complete leg, three axes
+→ air-entry and hold
+→ touchdown
+→ split roll
+→ final combined sequence
+```
 
-First hardware air-entry-only command log:
+## 3. Maintained Runtime Files
 
-- `testdata/hardware_trial_air_entry_only/air_entry_and_hold_only_commands.jsonl`
+```text
+tools/can_interface/statemachine/main.py
+tools/can_interface/initUI/ui.py
+tools/publish_cmdforjetson_single_axis_test.py
+tools/publish_cmdforjetson_jsonl.py
+```
 
-Final-stage full sequence only:
+Current reference candidate:
 
-- `testdata/entry_touchdown_roll_sequence/combined_with_hold_commands.jsonl`
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
+```
 
-## 3. CAN Specification
+Candidate-specific decision:
 
-- ALIGN request: `0x000 + joint_index`
-- ALIGN result RX: `0x100 + joint_index`
-- HOME jog: `0x200 + joint_index`
-- SET HOME: `0x300 + joint_index`
-- position command: `0x400 + joint_index`
-- RUN start: `0x600 + joint_index`
-- position payload: `[0,0,0,0] + little-endian float32(rad)`
-- position unit: rad
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
+  pre_hardware_decision.md
+```
 
-## 4. Use=True / Use=False Specification
+## 4. CAN Specification
 
-Use checkbox state is the active joint selection.
+| Purpose | CAN ID |
+|---|---:|
+| standby heartbeat RX | `0x0FF` |
+| ALIGN request TX | `0x000 + axis` |
+| ALIGN result RX | `0x100 + axis` |
+| HOME jog TX | `0x200 + axis` |
+| SET HOME TX | `0x300 + axis` |
+| POSITION TX | `0x400 + axis` |
+| RUN TX | `0x600 + axis` |
 
-- `/cmdForJetson.position` must always be 24 values.
-- CAN frames are sent only for `Use=True` joints.
-- `Use=False` joints receive no `0x400+i` position frame.
-- `Use=True=0,1,2,3` emits only `0x400..0x403` position frames.
-- `Use=False` disconnected joints do not block RUN.
-- RUN is rejected if no joint is Use=True.
-- RUN is allowed only when all Use=True joints are connected, aligned, and homed.
+Position payload:
 
-## 5. Pre-Hardware Prohibitions
+```text
+[0,0,0,0] + little-endian float32(rad)
+```
 
-Do not:
+Axis10 example:
 
-- execute `external/can_interface`
-- edit `data/reference_candidates`
-- run `combined_with_hold_commands.jsonl` on first hardware trial
-- run air-entry before small-angle test
-- run roll body before air-entry is confirmed
-- press SET HOME before HOME direction and posture are visually checked
-- roll before STOP behavior is verified
-- set Use=True on a missing or unverified unit
-- open `can0` during dry-run or mock checks
+```text
+ALIGN:    0x00A
+SET HOME: 0x30A
+POSITION: 0x40A
+RUN:      0x60A
+```
 
-## 6. Terminal Layout
+## 5. ROS Interface
 
-Use separate terminals:
+### UI command
 
-- Terminal A: `roscore`
-- Terminal B: CAN setup and `candump`
-- Terminal C: StateMachine
-- Terminal D: UI
-- Terminal E: `/cmdForJetson` publisher
-- Terminal F: emergency/manual rostopic commands
+```text
+Topic: /ui/leg_command
+Message: std_msgs/String
+```
 
-## 7. Common Preparation
+Implemented commands include:
 
-Run in every ROS terminal:
+```text
+use:<axis>:0|1
+align
+align:<axis>
+home_move:<axis>:-1|1
+home_step:<rad>
+set_home:<axis>
+run
+stop
+```
+
+`align` applies to all current`Use=True` axes. `align:<axis>` requests one indexed axis.
+
+There is no implemented global `home` or global `set_home` command. HOME jog and SET HOME are indexed.
+
+### Position command
+
+```text
+Topic: /cmdForJetson
+Message: sensor_msgs/JointState
+position: exactly 24 elements
+unit: rad
+```
+
+StateMachine sends RUN and POSITION only to`Use=True` axes.
+
+## 6. Use=True / Use=False
+
+- `Use=True`: active axis; included in ALIGN, HOME, RUN, and POSITION safety gates.
+- `Use=False`: inactive axis; receives no RUN or POSITION frame.
+- RUN is rejected when no axis is active.
+- RUN is accepted only when all active axes are aligned and homed in the current session.
+- disconnected inactive axes do not block RUN.
+- changing Use selection after the session starts should be avoided; STOP and restart the session instead.
+
+## 7. Terminal Layout
+
+Use separate terminals.
+
+| Terminal | Purpose |
+|---|---|
+| A | `roscore` |
+| B | CAN setup and `candump` |
+| C | StateMachine |
+| D | UI |
+| E | `/cmdForJetson` publisher |
+| F | manual STOP / status checks |
+
+## 8. Common ROS Preparation
+
+In every ROS terminal:
 
 ```bash
-cd <repo_root>
+cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 ```
 
-Replace `<repo_root>` with this repository root.
+Confirm the repository and branch:
 
-## 8. Start roscore
+```bash
+git status -sb
+git log -1 --oneline
+```
+
+Record the commit used for every hardware test.
+
+## 9. Start roscore
 
 Terminal A:
 
@@ -102,9 +175,37 @@ Terminal A:
 roscore
 ```
 
-## 9. CAN Preparation
+## 10. vcan Verification Before Hardware
 
-Only do this when intentionally preparing hardware CAN. Do not run this during mock or dry-run checks.
+Create or reuse`vcan0`:
+
+```bash
+sudo modprobe vcan
+ip link show vcan0 >/dev/null 2>&1 || sudo ip link add dev vcan0 type vcan
+sudo ip link set up vcan0
+ip -details link show vcan0
+```
+
+Monitor:
+
+```bash
+candump -L vcan0
+```
+
+Start StateMachine on`vcan0`:
+
+```bash
+python2 tools/can_interface/statemachine/main.py \
+  --can-interface socketcan \
+  --can-channel vcan0 \
+  --can-bitrate 500000
+```
+
+Do not replace`vcan0`with`can0`during this check.
+
+## 11. Prepare Hardware CAN
+
+Run only when intentionally starting a hardware trial.
 
 Terminal B:
 
@@ -114,174 +215,95 @@ sudo ip link set can0 up type can bitrate 500000
 ip -details link show can0
 ```
 
-Monitor CAN:
+Start a timestamped log:
 
 ```bash
-candump -tz can0
+candump -L can0 | tee /tmp/lily_hardware_can.log
 ```
 
-## 10. vcan Verification Path
+Confirm visually that the active channel is`can0`, not`vcan0`.
 
-Use this before hardware when a SocketCAN path is needed without hardware CAN:
+## 12. Start StateMachine On Hardware CAN
 
-```bash
-sudo modprobe vcan
-sudo ip link add dev vcan0 type vcan 2>/dev/null || true
-sudo ip link set up vcan0
-```
-
-Start StateMachine on `vcan0`:
+Terminal C:
 
 ```bash
-python tools/can_interface/statemachine/main.py \
-  --can-interface socketcan \
-  --can-channel vcan0 \
-  --can-bitrate 500000
-```
-
-## 11. StateMachine On Hardware CAN
-
-Only after hardware CAN preparation and operator approval:
-
-```bash
-python tools/can_interface/statemachine/main.py \
+python2 tools/can_interface/statemachine/main.py \
   --can-interface socketcan \
   --can-channel can0 \
   --can-bitrate 500000
 ```
 
-The maintained StateMachine path is `tools/can_interface/statemachine/main.py`. Do not run the `external/` copy.
+Expected startup log includes:
 
-## 12. Start UI
+```text
+CAN bus ready: interface=socketcan channel=can0 bitrate=500000
+StateMachine initialized. Listening /ui/leg_command and /cmdForJetson
+```
+
+Stop immediately if the channel or bitrate is not as intended.
+
+## 13. Start UI
 
 Terminal D:
 
 ```bash
-python tools/can_interface/initUI/ui.py
+python2 tools/can_interface/initUI/ui.py
 ```
 
-The maintained UI path is `tools/can_interface/initUI/ui.py`.
+The UI requests operations through`/ui/leg_command`. CAN IDs and safety gates remain owned by StateMachine.
 
-## 13. Use Setting
+## 14. Confirm Connection
 
-Set four-axis Use=True example:
+Connection is discovered from MCU standby heartbeat:
 
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:0:1'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:1:1'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:2:1'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:3:1'"
+```text
+0x0FF payload data[0] = axis
 ```
 
-Turn unused axes OFF:
+There is no required global`connect`command. Confirm that the intended axis becomes Connected in the UI or StateMachine log.
 
-```bash
-for i in $(seq 4 23); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':0'"
-done
-```
+After ALIGN succeeds, standby heartbeat may stop. That alone is not a disconnection.
 
-Set all 24 axes Use=True only when all 24 units are installed and verified:
+## 15. Select Use Axes
+
+### Axis10 only
 
 ```bash
 for i in $(seq 0 23); do
+  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':0'"
+done
+
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:10:1'"
+```
+
+Verify in the UI that only axis10 is active.
+
+### One complete leg example
+
+Axis numbering follows:
+
+```text
+axis = 3 × leg_index + joint_index
+```
+
+For axes9,10,11:
+
+```bash
+for i in $(seq 0 23); do
+  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':0'"
+done
+
+for i in 9 10 11; do
   rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':1'"
 done
 ```
 
-## 14. RUN Negative Test
+Do not set all 24 axes`Use=True`until every actuator is installed and individually verified.
 
-Before CONNECT/ALIGN/HOME, RUN must be rejected:
+## 16. RUN Negative Test
 
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
-```
-
-Expected: no `0x400+i` position frames. If active joints are not connected/aligned/homed, RUN is rejected.
-
-## 15. CONNECT
-
-Current StateMachine receives connection by CAN ping RX `0x0FF`; there is no implemented global `connect` UI command in `tools/can_interface`.
-
-The following command is a negative/compatibility probe only and is expected to be ignored unless a future implementation adds it:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'connect'"
-```
-
-Actual CONNECT confirmation must come from unit ping RX and UI state changing to Connected.
-
-## 16. ALIGN
-
-The current implemented command is indexed: `align:<joint_index>`.
-
-For four active axes:
-
-```bash
-for i in $(seq 0 3); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align:'$i"
-done
-```
-
-A global `align` command is not currently implemented and should be treated as a negative/compatibility probe:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align'"
-```
-
-Expected CAN for Use=True 0..3: `0x000..0x003` only.
-
-## 17. HOME Jog
-
-There is no implemented global `home` command. HOME jog is indexed and directional.
-
-For one small positive jog on four active axes:
-
-```bash
-for i in $(seq 0 3); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:'$i':1'"
-done
-```
-
-For one small negative jog:
-
-```bash
-for i in $(seq 0 3); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:'$i':-1'"
-done
-```
-
-The following global command is not implemented and should not be used as the real HOME action:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home'"
-```
-
-Verify HOME direction visually before continuing.
-
-## 18. SET HOME
-
-SET HOME is indexed.
-
-For four active axes:
-
-```bash
-for i in $(seq 0 3); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'set_home:'$i"
-done
-```
-
-The following global command is not currently implemented and should be treated as a negative/compatibility probe:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'set_home'"
-```
-
-Current limitation: SET HOME has no MCU ACK in this software path. The StateMachine marks `homed=True` after command send. Treat this as operator-confirmed.
-
-## 19. RUN
-
-After Use=True axes are connected, aligned, and homed:
+Before ALIGN and SET HOME, RUN must be rejected.
 
 ```bash
 rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
@@ -289,13 +311,100 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
 
 Expected:
 
-- RUN start sends `0x600 + joint_index` only for Use=True axes.
-- `/cmdForJetson` position frames are converted only after RUN.
-- Use=False axes receive no position frames.
+- RUN rejected
+- no`0x600 + axis`
+- no`0x400 + axis`
 
-## 20. STOP
+Do not continue if RUN is accepted before active axes are ready.
 
-STOP must be tested before motion tests:
+## 17. ALIGN
+
+### All Use=True axes
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align'"
+```
+
+### One indexed axis
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align:10'"
+```
+
+Expected axis10 traffic:
+
+```text
+TX 0x00A
+RX 0x10A with success flag
+```
+
+On initialization error, review`0x0EE`, wait for standby heartbeat to return, and retry only the failed axis. Do not bypass the error latch.
+
+## 18. HOME Jog
+
+HOME jog is indexed and directional.
+
+Set a conservative step:
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_step:0.002'"
+```
+
+Positive jog:
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:1'"
+```
+
+Negative jog:
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:-1'"
+```
+
+Confirm the physical direction visually. Do not infer up/down or forward/back only from the sign; the visible direction depends on axis, URDF joint axis, mounting, and sign convention.
+
+## 19. SET HOME
+
+SET HOME is indexed.
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'set_home:10'"
+```
+
+Current limitation:
+
+- this path has no separate MCU SET HOME ACK
+- StateMachine marks the axis homed after successful command send
+- the operator must visually confirm posture before RUN
+
+For one complete leg:
+
+```bash
+for i in 9 10 11; do
+  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'set_home:'$i"
+done
+```
+
+## 20. RUN
+
+After all active axes are connected, aligned, and homed:
+
+```bash
+rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
+```
+
+Expected:
+
+- one`0x600 + axis`frame per active axis
+- StateMachine enters RUN
+- later`/cmdForJetson`messages are converted only for active axes
+
+RUN is not retransmitted on every position sample.
+
+## 21. STOP
+
+Test STOP before every motion stage.
 
 ```bash
 rostopic pub -1 /ui/leg_command std_msgs/String "data: 'stop'"
@@ -303,157 +412,275 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'stop'"
 
 Expected:
 
-- `is_run=False`
-- later `/cmdForJetson` messages produce no position CAN frames
-- STOP itself sends no position frames
+-`is_run=False`
+- later`/cmdForJetson`messages produce no POSITION frames
+- active axes return to Homed display state on the PC side
 
-## 21. /cmdForJetson Publisher
+STOP does not replace physical emergency isolation. Keep the physical stop path ready.
 
-The helper publisher reads JSONL and publishes `sensor_msgs/JointState` to `/cmdForJetson`. It never opens CAN. CAN conversion is done only by the StateMachine.
+## 22. Single-Axis Publisher
+
+The publisher never opens CAN and never issues ALIGN, HOME, RUN, or STOP.
+
+### Positive 0.002 rad
+
+```bash
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 \
+  --direction plus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
+```
+
+Command sequence:
+
+```text
+0.000 → 0.001 → 0.002 → 0.001 → 0.000 rad
+```
+
+### Negative 0.002 rad
+
+Run only after the positive test passes.
+
+```bash
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 \
+  --direction minus \
+  --amplitude-rad 0.002 \
+  --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
+```
+
+Command sequence:
+
+```text
+0.000 → -0.001 → -0.002 → -0.001 → 0.000 rad
+```
+
+### Positive and negative 0.005 rad
+
+Run only after both`+/-0.002 rad`tests pass.
+
+```bash
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 --direction plus \
+  --amplitude-rad 0.005 --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
+
+python2 tools/publish_cmdforjetson_single_axis_test.py \
+  --axis 10 --direction minus \
+  --amplitude-rad 0.005 --step-rad 0.001 \
+  --period-sec 0.500 \
+  --start-hold-sec 1.000 \
+  --peak-hold-sec 1.000 \
+  --end-hold-sec 1.000
+```
+
+Issue STOP after each test and inspect the CAN log.
+
+## 23. Single-Axis PASS Conditions
+
+- only intended axis is`Use=True`
+- RUN ID is only`0x600 + target axis`
+- POSITION ID is only`0x400 + target axis`
+- commanded direction matches the observed logical direction
+- motion returns to center
+- no other axis moves
+- no`0x0EE`
+- no`pc_send_error`
+- no`can_interface_error`
+- no abnormal sound, shock, current, heat, or vibration
+
+## 24. One-Leg Three-Axis Test
+
+Proceed only after single-axis positive/negative tests pass.
+
+Recommended first one-leg test:
+
+1. select exactly the three axes of one leg
+2. ALIGN all selected axes
+3. confirm HOME direction for each axis separately
+4. SET HOME each axis
+5. RUN
+6. send one small axis motion at a time using the single-axis publisher while the other two axes remain finite and safe through the selected test method
+7. verify STOP
+8. only then test coordinated three-axis commands
+
+A coordinated one-leg publisher or validated JSONL must use a full 24-element`JointState`. Do not improvise direct CAN commands.
+
+## 25. JSONL Publisher
 
 General form:
 
 ```bash
-python tools/publish_cmdforjetson_jsonl.py \
+python2 tools/publish_cmdforjetson_jsonl.py \
   --command-log <commands.jsonl> \
   --rate <hz> \
   --start-index <n> \
   --max-frames <n>
 ```
 
-The JSONL record must contain one of:
+Accepted position keys:
 
-- `joint_command_rad`
-- `position`
-- `joint_positions_rad`
-
-Each position must contain exactly 24 values.
-
-## 22. Small-Angle Test
-
-If this file does not exist yet, create and validate it before running hardware:
-
-- `testdata/hardware_bringup_4unit_small_motion/four_unit_small_motion_commands.jsonl`
-
-Command after it exists:
-
-```bash
-python tools/publish_cmdforjetson_jsonl.py \
-  --command-log testdata/hardware_bringup_4unit_small_motion/four_unit_small_motion_commands.jsonl \
-  --rate 5
+```text
+joint_command_rad
+position
+joint_positions_rad
 ```
 
-Expected:
+Every frame must contain exactly 24 positions.
 
-- only Use=True axes move
-- direction is correct
-- STOP immediately stops later position conversion
-- no unexpected sound, current, heat, or jump
+## 26. Air-Entry And Hold
 
-Do not run air-entry until small-angle motion is verified.
+Proceed only after one-leg three-axis confirmation.
 
-## 23. Air-Entry + Hold Only
+Command log:
 
-This is the first staged posture test after small-angle motion.
-
-Use:
-
-- `testdata/hardware_trial_air_entry_only/air_entry_and_hold_only_commands.jsonl`
-
-It contains 135 frames: 120 air-entry + 15 touchdown hold. It contains 0 roll-body frames.
+```text
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
+  staged/air_entry_and_hold_only_commands.jsonl
+```
 
 Command:
 
 ```bash
-python tools/publish_cmdforjetson_jsonl.py \
-  --command-log testdata/hardware_trial_air_entry_only/air_entry_and_hold_only_commands.jsonl \
+python2 tools/publish_cmdforjetson_jsonl.py \
+  --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/air_entry_and_hold_only_commands.jsonl \
   --rate 5
 ```
 
-Expected:
+Conditions:
 
-- robot is suspended in air at start
-- no joint jumps
-- final hold posture is candidate02 start posture
-- no roll motion occurs
+- robot suspended in air at start
+- no joint jump
+- no unexpected contact
+- final posture held stably
+- no roll-body motion
 
-## 24. Touchdown Contact Confirmation
+## 27. Touchdown Confirmation
 
-Touchdown offset is operational height margin, not a joint command.
+Touchdown height margin is an operational fixture/base-height condition, not an encoded joint offset.
 
-Use at hold posture:
+At the final air-entry hold posture:
 
-- analytical minimum: +0.013 m
-- recommended operational: +0.015 m
-- first hardware trial: +0.020 m
+- lower the robot under controlled support
+- confirm intended contact sequence
+- confirm foot and link clearance
+- confirm stable support and no unexpected slide
+- monitor current, sound, vibration, and temperature
+- record the actual base/floor height margin used
 
-For first hardware trial, use +0.020 m equivalent. Lower the robot manually while holding candidate02 start posture.
+Do not continue to roll until contact is accepted.
 
-Do not continue to roll until contact, clearance, stability, sound, and current are acceptable.
+## 28. Split Roll Stages
 
-## 25. Short Roll Segment
+Use each dedicated staged file. Do not replace these with a start-index guess when a frozen staged file exists.
 
-Use the canonical roll body only after small-angle, air-entry, and touchdown checks pass.
-
-50 frames:
-
-```bash
-python tools/publish_cmdforjetson_jsonl.py \
-  --command-log data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl \
-  --rate 3 \
-  --start-index 0 \
-  --max-frames 50
-```
-
-100 frames:
+### Roll 0–50
 
 ```bash
-python tools/publish_cmdforjetson_jsonl.py \
-  --command-log data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl \
-  --rate 3 \
-  --start-index 0 \
-  --max-frames 100
-```
-
-Stop immediately on unexpected behavior.
-
-## 26. Full Roll Final Confirmation
-
-Do not run this during initial hardware trial.
-
-Final-stage command only after all earlier stages pass:
-
-```bash
-python tools/publish_cmdforjetson_jsonl.py \
-  --command-log testdata/entry_touchdown_roll_sequence/combined_with_hold_commands.jsonl \
+python2 tools/publish_cmdforjetson_jsonl.py \
+  --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_0_50_commands.jsonl \
   --rate 3
 ```
 
-This file includes air-entry, hold, and full candidate02 roll. It is not the first hardware command file.
+### Roll 50–100
 
-## 27. Execution Prohibitions
+```bash
+python2 tools/publish_cmdforjetson_jsonl.py \
+  --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_50_100_commands.jsonl \
+  --rate 3
+```
 
-Never:
+### Roll 100–300
 
-- run `external/can_interface`
-- edit `data/reference_candidates`
-- run full roll before small-angle, air-entry, touchdown, and short-roll checks
-- set missing units to Use=True
-- press SET HOME before HOME direction/posture is visually confirmed
-- run roll before STOP is tested
-- open `can0` in dry-run/mock context
+```bash
+python2 tools/publish_cmdforjetson_jsonl.py \
+  --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_100_300_commands.jsonl \
+  --rate 3
+```
 
-## 28. PASS Conditions
+### Roll 300–end
 
-Before moving to the next stage, all of these must hold:
+```bash
+python2 tools/publish_cmdforjetson_jsonl.py \
+  --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/roll_300_end_commands.jsonl \
+  --rate 3
+```
 
-- correct Use=True axes selected
-- inactive axes receive no position CAN frames
-- active axes connected/aligned/homed
-- RUN negative test rejects before ready state
-- STOP tested and working
-- no unexpected CAN IDs in `candump`
-- no unexpected mechanical motion
-- no excessive current, heat, sound, or vibration
-- operator can physically stop the system
-- all observations recorded
+`roll_300_end`is a long final segment and must not be used before all shorter segments pass.
+
+## 29. Final Combined Sequence
+
+Final confirmation only:
+
+```bash
+python2 tools/publish_cmdforjetson_jsonl.py \
+  --command-log data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/combined_with_hold_commands.jsonl \
+  --rate 3
+```
+
+This file contains:
+
+```text
+air-entry + hold + complete 2233-frame roll body
+```
+
+Do not run it before all split roll stages pass.
+
+## 30. Immediate Stop Conditions
+
+Stop the current stage when any of the following occurs:
+
+- unexpected axis motion
+- posture jump or discontinuity
+- failure to return to center
+- unexpected contact or link interference
+- abnormal sound, shock, current, vibration, or heat
+- CAN frame for a`Use=False`axis
+-`0x0EE`
+- CAN send error
+- CAN interface error
+- command timing or rate concern
+- UI state mismatch
+- operator concern
+
+After abnormal STOP, do not immediately restart. Save logs and inspect the cause.
+
+## 31. Record For Every Hardware Trial
+
+Record at least:
+
+```text
+date and time
+operator
+Git commit
+Jetson/PC and OS
+CAN interface and bitrate
+active axes
+ALIGN/HOME result
+command file or publisher arguments
+rate and hold values
+CAN log path
+observed motion direction
+STOP result
+sound/current/temperature observations
+PASS/FAIL and reason
+```
+
+## 32. Related Documents
+
+- [`../README.md`](../README.md)
+- [`HARDWARE_PRETEST_STATUS.md`](HARDWARE_PRETEST_STATUS.md)
+- [`Lily_8leg_Robot_Command_Reference.md`](Lily_8leg_Robot_Command_Reference.md)
+- [`../data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/pre_hardware_decision.md`](../data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/pre_hardware_decision.md)
