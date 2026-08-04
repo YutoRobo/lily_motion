@@ -33,7 +33,8 @@ real axis10 +0.002 rad: provisional PASS
 ```text
 axis10 negative 0.002 rad
 → axis10 positive/negative 0.005 rad
-→ one complete leg, three axes
+→ each axis of one leg individually
+→ one complete leg with three finite commands
 → air-entry and hold
 → touchdown
 → split roll
@@ -111,7 +112,7 @@ run
 stop
 ```
 
-`align` applies to all current`Use=True` axes. `align:<axis>` requests one indexed axis.
+`align` applies to all current `Use=True` axes. `align:<axis>` requests one indexed axis.
 
 There is no implemented global `home` or global `set_home` command. HOME jog and SET HOME are indexed.
 
@@ -124,7 +125,7 @@ position: exactly 24 elements
 unit: rad
 ```
 
-StateMachine sends RUN and POSITION only to`Use=True` axes.
+StateMachine sends RUN and POSITION only to `Use=True` axes.
 
 ## 6. Use=True / Use=False
 
@@ -135,7 +136,19 @@ StateMachine sends RUN and POSITION only to`Use=True` axes.
 - disconnected inactive axes do not block RUN.
 - changing Use selection after the session starts should be avoided; STOP and restart the session instead.
 
-## 7. Terminal Layout
+## 7. 24-Element And NaN Safety Rule
+
+Every `/cmdForJetson` message must contain 24 position elements.
+
+- every `Use=True` axis must have a finite value within its joint limit
+- inactive axes are not sent to CAN
+- the single-axis publisher sends one finite target and 23 NaN guards
+- therefore, the single-axis publisher is valid only when exactly the target axis is `Use=True`
+- if three axes are `Use=True`, all three positions must be finite in the same 24-element message
+
+Do not use the single-axis publisher while multiple axes are active.
+
+## 8. Terminal Layout
 
 Use separate terminals.
 
@@ -148,7 +161,7 @@ Use separate terminals.
 | E | `/cmdForJetson` publisher |
 | F | manual STOP / status checks |
 
-## 8. Common ROS Preparation
+## 9. Common ROS Preparation
 
 In every ROS terminal:
 
@@ -158,16 +171,14 @@ source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 ```
 
-Confirm the repository and branch:
+Confirm and record the repository commit:
 
 ```bash
 git status -sb
 git log -1 --oneline
 ```
 
-Record the commit used for every hardware test.
-
-## 9. Start roscore
+## 10. Start roscore
 
 Terminal A:
 
@@ -175,9 +186,9 @@ Terminal A:
 roscore
 ```
 
-## 10. vcan Verification Before Hardware
+## 11. vcan Verification Before Hardware
 
-Create or reuse`vcan0`:
+Create or reuse `vcan0`:
 
 ```bash
 sudo modprobe vcan
@@ -192,7 +203,7 @@ Monitor:
 candump -L vcan0
 ```
 
-Start StateMachine on`vcan0`:
+Start StateMachine on `vcan0`:
 
 ```bash
 python2 tools/can_interface/statemachine/main.py \
@@ -201,9 +212,9 @@ python2 tools/can_interface/statemachine/main.py \
   --can-bitrate 500000
 ```
 
-Do not replace`vcan0`with`can0`during this check.
+Do not replace `vcan0` with `can0` during this check.
 
-## 11. Prepare Hardware CAN
+## 12. Prepare Hardware CAN
 
 Run only when intentionally starting a hardware trial.
 
@@ -221,9 +232,9 @@ Start a timestamped log:
 candump -L can0 | tee /tmp/lily_hardware_can.log
 ```
 
-Confirm visually that the active channel is`can0`, not`vcan0`.
+Confirm visually that the active channel is `can0`, not `vcan0`.
 
-## 12. Start StateMachine On Hardware CAN
+## 13. Start StateMachine On Hardware CAN
 
 Terminal C:
 
@@ -243,7 +254,7 @@ StateMachine initialized. Listening /ui/leg_command and /cmdForJetson
 
 Stop immediately if the channel or bitrate is not as intended.
 
-## 13. Start UI
+## 14. Start UI
 
 Terminal D:
 
@@ -251,9 +262,9 @@ Terminal D:
 python2 tools/can_interface/initUI/ui.py
 ```
 
-The UI requests operations through`/ui/leg_command`. CAN IDs and safety gates remain owned by StateMachine.
+The UI requests operations through `/ui/leg_command`. CAN IDs and safety gates remain owned by StateMachine.
 
-## 14. Confirm Connection
+## 15. Confirm Connection
 
 Connection is discovered from MCU standby heartbeat:
 
@@ -261,11 +272,11 @@ Connection is discovered from MCU standby heartbeat:
 0x0FF payload data[0] = axis
 ```
 
-There is no required global`connect`command. Confirm that the intended axis becomes Connected in the UI or StateMachine log.
+There is no required global `connect` command. Confirm that the intended axis becomes Connected in the UI or StateMachine log.
 
 After ALIGN succeeds, standby heartbeat may stop. That alone is not a disconnection.
 
-## 15. Select Use Axes
+## 16. Select Use Axes
 
 ### Axis10 only
 
@@ -287,7 +298,7 @@ Axis numbering follows:
 axis = 3 × leg_index + joint_index
 ```
 
-For axes9,10,11:
+For one leg represented by axes9,10,11:
 
 ```bash
 for i in $(seq 0 23); do
@@ -299,9 +310,11 @@ for i in 9 10 11; do
 done
 ```
 
-Do not set all 24 axes`Use=True`until every actuator is installed and individually verified.
+Use this three-axis selection only for a coordinated command source that supplies finite values for axes9,10,11.
 
-## 16. RUN Negative Test
+Do not set all 24 axes `Use=True` until every actuator is installed and individually verified.
+
+## 17. RUN Negative Test
 
 Before ALIGN and SET HOME, RUN must be rejected.
 
@@ -312,12 +325,12 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
 Expected:
 
 - RUN rejected
-- no`0x600 + axis`
-- no`0x400 + axis`
+- no `0x600 + axis`
+- no `0x400 + axis`
 
 Do not continue if RUN is accepted before active axes are ready.
 
-## 17. ALIGN
+## 18. ALIGN
 
 ### All Use=True axes
 
@@ -338,9 +351,9 @@ TX 0x00A
 RX 0x10A with success flag
 ```
 
-On initialization error, review`0x0EE`, wait for standby heartbeat to return, and retry only the failed axis. Do not bypass the error latch.
+On initialization error, review `0x0EE`, wait for standby heartbeat to return, and retry only the failed axis. Do not bypass the error latch.
 
-## 18. HOME Jog
+## 19. HOME Jog
 
 HOME jog is indexed and directional.
 
@@ -364,7 +377,7 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:-1'"
 
 Confirm the physical direction visually. Do not infer up/down or forward/back only from the sign; the visible direction depends on axis, URDF joint axis, mounting, and sign convention.
 
-## 19. SET HOME
+## 20. SET HOME
 
 SET HOME is indexed.
 
@@ -378,7 +391,7 @@ Current limitation:
 - StateMachine marks the axis homed after successful command send
 - the operator must visually confirm posture before RUN
 
-For one complete leg:
+For axes9,10,11:
 
 ```bash
 for i in 9 10 11; do
@@ -386,7 +399,7 @@ for i in 9 10 11; do
 done
 ```
 
-## 20. RUN
+## 21. RUN
 
 After all active axes are connected, aligned, and homed:
 
@@ -396,13 +409,13 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
 
 Expected:
 
-- one`0x600 + axis`frame per active axis
+- one `0x600 + axis` frame per active axis
 - StateMachine enters RUN
-- later`/cmdForJetson`messages are converted only for active axes
+- later `/cmdForJetson` messages are converted only for active axes
 
 RUN is not retransmitted on every position sample.
 
-## 21. STOP
+## 22. STOP
 
 Test STOP before every motion stage.
 
@@ -412,15 +425,17 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'stop'"
 
 Expected:
 
--`is_run=False`
-- later`/cmdForJetson`messages produce no POSITION frames
+- `is_run=False`
+- later `/cmdForJetson` messages produce no POSITION frames
 - active axes return to Homed display state on the PC side
 
 STOP does not replace physical emergency isolation. Keep the physical stop path ready.
 
-## 22. Single-Axis Publisher
+## 23. Single-Axis Publisher
 
 The publisher never opens CAN and never issues ALIGN, HOME, RUN, or STOP.
+
+It must be used with exactly one `Use=True` axis.
 
 ### Positive 0.002 rad
 
@@ -435,8 +450,6 @@ python2 tools/publish_cmdforjetson_single_axis_test.py \
   --peak-hold-sec 1.000 \
   --end-hold-sec 1.000
 ```
-
-Command sequence:
 
 ```text
 0.000 → 0.001 → 0.002 → 0.001 → 0.000 rad
@@ -458,15 +471,13 @@ python2 tools/publish_cmdforjetson_single_axis_test.py \
   --end-hold-sec 1.000
 ```
 
-Command sequence:
-
 ```text
 0.000 → -0.001 → -0.002 → -0.001 → 0.000 rad
 ```
 
 ### Positive and negative 0.005 rad
 
-Run only after both`+/-0.002 rad`tests pass.
+Run only after both `+/-0.002 rad` tests pass.
 
 ```bash
 python2 tools/publish_cmdforjetson_single_axis_test.py \
@@ -488,37 +499,57 @@ python2 tools/publish_cmdforjetson_single_axis_test.py \
 
 Issue STOP after each test and inspect the CAN log.
 
-## 23. Single-Axis PASS Conditions
+## 24. Single-Axis PASS Conditions
 
-- only intended axis is`Use=True`
-- RUN ID is only`0x600 + target axis`
-- POSITION ID is only`0x400 + target axis`
+- only intended axis is `Use=True`
+- RUN ID is only `0x600 + target axis`
+- POSITION ID is only `0x400 + target axis`
 - commanded direction matches the observed logical direction
 - motion returns to center
 - no other axis moves
-- no`0x0EE`
-- no`pc_send_error`
-- no`can_interface_error`
+- no `0x0EE`
+- no `pc_send_error`
+- no `can_interface_error`
 - no abnormal sound, shock, current, heat, or vibration
 
-## 24. One-Leg Three-Axis Test
+## 25. One-Leg Three-Axis Test
 
-Proceed only after single-axis positive/negative tests pass.
+Proceed only after axis10 positive/negative tests pass.
 
-Recommended first one-leg test:
+### Stage A: verify each axis individually
 
-1. select exactly the three axes of one leg
-2. ALIGN all selected axes
-3. confirm HOME direction for each axis separately
-4. SET HOME each axis
+For each axis of the selected leg:
+
+1. set only that one axis to `Use=True`
+2. ALIGN the axis
+3. confirm HOME direction
+4. SET HOME
 5. RUN
-6. send one small axis motion at a time using the single-axis publisher while the other two axes remain finite and safe through the selected test method
-7. verify STOP
-8. only then test coordinated three-axis commands
+6. use the single-axis publisher at `0.002 rad`
+7. verify return to center and STOP
+8. repeat positive and negative directions as approved
 
-A coordinated one-leg publisher or validated JSONL must use a full 24-element`JointState`. Do not improvise direct CAN commands.
+Do not leave the other two axes `Use=True` during this stage because the single-axis publisher sends NaN at their positions.
 
-## 25. JSONL Publisher
+### Stage B: coordinated three-axis command
+
+After all three axes pass individually:
+
+1. STOP and start a new session
+2. set exactly the three axes of one leg to `Use=True`
+3. ALIGN all three
+4. confirm HOME direction and SET HOME for all three
+5. RUN
+6. publish a reviewed 24-element `JointState` or JSONL where all three active axes contain finite, in-limit values
+7. keep the other 21 axes inactive
+8. verify the three POSITION CAN IDs and physical response
+9. STOP
+
+Do not use `publish_cmdforjetson_single_axis_test.py` in Stage B.
+
+At the time of this document update, no dedicated coordinated one-leg command file is declared as the formal next command. Create and review that command separately before Stage B.
+
+## 26. JSONL Publisher
 
 General form:
 
@@ -538,11 +569,11 @@ position
 joint_positions_rad
 ```
 
-Every frame must contain exactly 24 positions.
+Every frame must contain exactly 24 positions. Every active axis must have a finite value.
 
-## 26. Air-Entry And Hold
+## 27. Air-Entry And Hold
 
-Proceed only after one-leg three-axis confirmation.
+Proceed only after the coordinated one-leg stage is accepted.
 
 Command log:
 
@@ -567,7 +598,7 @@ Conditions:
 - final posture held stably
 - no roll-body motion
 
-## 27. Touchdown Confirmation
+## 28. Touchdown Confirmation
 
 Touchdown height margin is an operational fixture/base-height condition, not an encoded joint offset.
 
@@ -582,7 +613,7 @@ At the final air-entry hold posture:
 
 Do not continue to roll until contact is accepted.
 
-## 28. Split Roll Stages
+## 29. Split Roll Stages
 
 Use each dedicated staged file. Do not replace these with a start-index guess when a frozen staged file exists.
 
@@ -618,9 +649,9 @@ python2 tools/publish_cmdforjetson_jsonl.py \
   --rate 3
 ```
 
-`roll_300_end`is a long final segment and must not be used before all shorter segments pass.
+`roll_300_end` is a long final segment and must not be used before all shorter segments pass.
 
-## 29. Final Combined Sequence
+## 30. Final Combined Sequence
 
 Final confirmation only:
 
@@ -638,7 +669,7 @@ air-entry + hold + complete 2233-frame roll body
 
 Do not run it before all split roll stages pass.
 
-## 30. Immediate Stop Conditions
+## 31. Immediate Stop Conditions
 
 Stop the current stage when any of the following occurs:
 
@@ -647,8 +678,8 @@ Stop the current stage when any of the following occurs:
 - failure to return to center
 - unexpected contact or link interference
 - abnormal sound, shock, current, vibration, or heat
-- CAN frame for a`Use=False`axis
--`0x0EE`
+- CAN frame for a `Use=False` axis
+- `0x0EE`
 - CAN send error
 - CAN interface error
 - command timing or rate concern
@@ -657,7 +688,7 @@ Stop the current stage when any of the following occurs:
 
 After abnormal STOP, do not immediately restart. Save logs and inspect the cause.
 
-## 31. Record For Every Hardware Trial
+## 32. Record For Every Hardware Trial
 
 Record at least:
 
@@ -678,7 +709,7 @@ sound/current/temperature observations
 PASS/FAIL and reason
 ```
 
-## 32. Related Documents
+## 33. Related Documents
 
 - [`../README.md`](../README.md)
 - [`HARDWARE_PRETEST_STATUS.md`](HARDWARE_PRETEST_STATUS.md)
