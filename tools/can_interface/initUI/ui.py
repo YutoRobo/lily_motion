@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import Tkinter as tk
+import Queue
 import rospy
 from std_msgs.msg import String
 
 NUM_LEGS = 24
 HOME_REPEAT_MS = 80  # 長押し時の繰り返し周期[ms]（調整OK）
+UI_EVENT_DRAIN_MAX = 256
 
 STATE_COLOR = {
     "Disconnected": "#cccccc",
@@ -33,6 +35,12 @@ class LegControlUI(object):
     def __init__(self, root):
         self.root = root
         self.root.title("Leg Control UI")
+
+        # rospy subscriber callbacks run outside the Tk main thread.
+        # They must never call Tk/Tcl APIs, including root.after().
+        # Create the queue before subscribing so an immediate ROS callback is
+        # safe even before root.mainloop() starts.
+        self.ui_event_queue = Queue.Queue()
 
         self.pub_cmd = rospy.Publisher("/ui/leg_command", String, queue_size=10)
         rospy.Subscriber("/ui/leg_status", String, self.status_callback)
@@ -174,6 +182,10 @@ class LegControlUI(object):
     # ===============================
     # ROS受信
     # ===============================
+    def _enqueue_ui_event(self, event):
+        """Thread-safe handoff from rospy callbacks to the Tk main thread."""
+        self.ui_event_queue.put(event)
+
     def diagnostic_targets_callback(self, msg):
         targets = []
         labels = {}
@@ -185,8 +197,7 @@ class LegControlUI(object):
                 continue
             targets.append(axis)
             labels[axis] = label
-        self.root.after(
-            0, lambda: self._apply_diagnostic_targets(targets, labels))
+        self._enqueue_ui_event(("diagnostic_targets", targets, labels))
 
     def _apply_diagnostic_targets(self, targets, labels):
         self.motion_candidates = list(targets)
@@ -198,7 +209,7 @@ class LegControlUI(object):
             axis = int(axis_text)
         except Exception:
             return
-        self.root.after(0, lambda: self._apply_diagnostic_status(axis, status))
+        self._enqueue_ui_event(("diagnostic_status", axis, status))
 
     def _apply_diagnostic_status(self, axis, status):
         if status == "Diagnostic RUN sent":
@@ -208,8 +219,7 @@ class LegControlUI(object):
         self.motion_status_label.config(text="axis%d: %s" % (axis, status))
 
     def motion_check_status_callback(self, msg):
-        status = msg.data
-        self.root.after(0, lambda: self._apply_motion_check_status(status))
+        self._enqueue_ui_event(("motion_check_status", msg.data))
 
     def _apply_motion_check_status(self, status):
         self.motion_check_active = (
@@ -220,21 +230,18 @@ class LegControlUI(object):
         try:
             leg_id, state = msg.data.split(",")
             leg_id = int(leg_id)
-        except:
+        except Exception:
             return
-
-        # GUIスレッドで実行させる
-        self.root.after(0, lambda: self._apply_status_update(leg_id, state))
+        self._enqueue_ui_event(("status", leg_id, state))
 
     def use_status_callback(self, msg):
         try:
             leg_id, active = msg.data.split(",")
             leg_id = int(leg_id)
             active = bool(int(active))
-        except:
+        except Exception:
             return
-        self.root.after(
-            0, lambda: self._apply_use_status_update(leg_id, active))
+        self._enqueue_ui_event(("use_status", leg_id, active))
 
     def _apply_use_status_update(self, leg_id, active):
         if leg_id not in self.widgets:
@@ -251,6 +258,36 @@ class LegControlUI(object):
 
         # Use is an explicit initialization/RUN configuration. Connection
         # status must never auto-enable or auto-disable it.
+
+    def _dispatch_ui_event(self, event):
+        """Apply one queued ROS event. Called only by the Tk main thread."""
+        if not event:
+            return
+        event_type = event[0]
+        if event_type == "diagnostic_targets":
+            self._apply_diagnostic_targets(event[1], event[2])
+        elif event_type == "diagnostic_status":
+            self._apply_diagnostic_status(event[1], event[2])
+        elif event_type == "motion_check_status":
+            self._apply_motion_check_status(event[1])
+        elif event_type == "status":
+            self._apply_status_update(event[1], event[2])
+        elif event_type == "use_status":
+            self._apply_use_status_update(event[1], event[2])
+        else:
+            rospy.logwarn("[UI] unknown queued event: %s", event_type)
+
+    def _drain_ui_events(self, max_events=UI_EVENT_DRAIN_MAX):
+        """Drain a bounded number of ROS events on the Tk main thread."""
+        processed = 0
+        while processed < max_events:
+            try:
+                event = self.ui_event_queue.get_nowait()
+            except Queue.Empty:
+                break
+            self._dispatch_ui_event(event)
+            processed += 1
+        return processed
 
     # ===============================
     # Use操作（ユーザーが管理）
@@ -344,6 +381,9 @@ class LegControlUI(object):
     # UI更新
     # ===============================
     def update_ui_loop(self):
+        # All Tk/Tcl updates triggered by ROS messages happen here, on the
+        # Tk main thread. rospy callbacks only enqueue plain Python data.
+        self._drain_ui_events()
         for i in range(NUM_LEGS):
             self.update_leg_ui(i)
         self.update_motion_check_ui()
