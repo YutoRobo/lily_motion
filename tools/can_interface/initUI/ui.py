@@ -6,7 +6,7 @@ from std_msgs.msg import String
 
 NUM_LEGS = 24
 HOME_REPEAT_MS = 80  # 長押し時の繰り返し周期[ms]（調整OK）
-UI_EVENT_DRAIN_MAX = 256
+UI_EVENT_DRAIN_MAX = 4096
 
 STATE_COLOR = {
     "Disconnected": "#cccccc",
@@ -259,6 +259,19 @@ class LegControlUI(object):
         # Use is an explicit initialization/RUN configuration. Connection
         # status must never auto-enable or auto-disable it.
 
+    def _ui_event_key(self, event):
+        """Return a coalescing key for display-state events."""
+        if not event:
+            return None
+        event_type = event[0]
+        if event_type in ("status", "use_status", "diagnostic_status"):
+            if len(event) < 2:
+                return None
+            return (event_type, event[1])
+        if event_type in ("diagnostic_targets", "motion_check_status"):
+            return (event_type, None)
+        return None
+
     def _dispatch_ui_event(self, event):
         """Apply one queued ROS event. Called only by the Tk main thread."""
         if not event:
@@ -278,16 +291,36 @@ class LegControlUI(object):
             rospy.logwarn("[UI] unknown queued event: %s", event_type)
 
     def _drain_ui_events(self, max_events=UI_EVENT_DRAIN_MAX):
-        """Drain a bounded number of ROS events on the Tk main thread."""
-        processed = 0
-        while processed < max_events:
+        """Drain queued ROS events and apply only the latest repeated state.
+
+        Repeated display-state events are coalesced per event type/axis before
+        touching Tk widgets. Unknown event types preserve FIFO dispatch order.
+        """
+        latest = {}
+        passthrough = []
+        drained = 0
+
+        while drained < max_events:
             try:
                 event = self.ui_event_queue.get_nowait()
             except Queue.Empty:
                 break
+
+            key = self._ui_event_key(event)
+            if key is None:
+                passthrough.append((drained, event))
+            else:
+                # Keep the sequence index of the newest occurrence so the
+                # final dispatch order follows the newest observed ROS order.
+                latest[key] = (drained, event)
+            drained += 1
+
+        pending = passthrough + list(latest.values())
+        pending.sort(key=lambda item: item[0])
+        for unused_seq, event in pending:
             self._dispatch_ui_event(event)
-            processed += 1
-        return processed
+
+        return drained
 
     # ===============================
     # Use操作（ユーザーが管理）
