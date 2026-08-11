@@ -4,7 +4,17 @@ from __future__ import division, print_function
 
 import argparse
 import json
+import os
 import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+from lily_motion_v3.command_timing import (
+    linear_interpolate_command,
+    resample_transport_records,
+)
 
 POSITION_KEYS = ('joint_command_rad', 'position', 'joint_positions_rad')
 POSITION_LENGTH = 24
@@ -20,7 +30,8 @@ def extract_position(record, record_index):
                 raise ValueError('record %d key %s length %d != %d' % (
                     record_index, key, len(pos), POSITION_LENGTH))
             return [float(v) for v in pos], key
-    raise ValueError('record %d has none of %s' % (record_index, ','.join(POSITION_KEYS)))
+    raise ValueError('record %d has none of %s' % (
+        record_index, ','.join(POSITION_KEYS)))
 
 
 def iter_positions(path, start_index=0, max_frames=None):
@@ -41,67 +52,76 @@ def iter_positions(path, start_index=0, max_frames=None):
 
 
 def interpolate_position(position0, position1, alpha):
+    """Backward-compatible wrapper around the shared interpolation function."""
     if len(position0) != POSITION_LENGTH or len(position1) != POSITION_LENGTH:
-        raise ValueError('interpolation requires two %d-element positions' % POSITION_LENGTH)
-    alpha = float(alpha)
-    return [
-        float(a) + (float(b) - float(a)) * alpha
-        for a, b in zip(position0, position1)
-    ]
+        raise ValueError(
+            'interpolation requires two %d-element positions' % POSITION_LENGTH)
+    return linear_interpolate_command(position0, position1, alpha)
+
+
+def _selected_records(path, start_index=0, max_frames=None):
+    records = []
+    for source_index, position, source_key in iter_positions(
+            path, start_index=start_index, max_frames=max_frames):
+        records.append({
+            'frame_index': source_index,
+            'joint_command_rad': list(position),
+            '_publisher_source_key': source_key,
+        })
+    return records
 
 
 def iter_resampled_positions(path, start_index=0, max_frames=None,
-                             resample_factor=1):
-    """Yield selected JSONL positions with optional linear interpolation.
+                             resample_factor=1, segment_key=None):
+    """Yield source JSONL positions with shared linear transport resampling.
 
-    ``start_index`` and ``max_frames`` apply to source JSONL records before
-    interpolation. ``resample_factor=1`` preserves the legacy publisher output.
+    ``start_index`` and ``max_frames`` select source JSONL records first.
+    ``resample_factor=1`` preserves the legacy publisher output.
     ``resample_factor=2`` inserts one midpoint between adjacent source records.
-    In general, N source records produce ``(N - 1) * factor + 1`` output
-    positions when N > 0.
     """
     factor = int(resample_factor)
     if factor < 1:
         raise ValueError('resample_factor must be >= 1')
 
-    source = iter_positions(path, start_index=start_index, max_frames=max_frames)
-    try:
-        previous_index, previous_position, previous_key = next(source)
-    except StopIteration:
-        return
+    source_records = _selected_records(
+        path, start_index=start_index, max_frames=max_frames)
+    records = resample_transport_records(
+        source_records, factor=factor, segment_key=segment_key)
 
-    for next_index, next_position, next_key in source:
-        for step in range(factor):
-            alpha = float(step) / float(factor)
-            if step == 0:
-                position = list(previous_position)
-            else:
-                position = interpolate_position(
-                    previous_position, next_position, alpha)
-            yield (
-                previous_index,
-                next_index,
-                position,
-                previous_key,
-                alpha,
-            )
-        previous_index = next_index
-        previous_position = next_position
-        previous_key = next_key
-
-    yield previous_index, None, list(previous_position), previous_key, 0.0
+    for record in records:
+        source_index = int(record.get(
+            'source_frame_index', record.get('frame_index', 0)))
+        next_source_index = record.get('next_source_frame_index')
+        source_key = record.get('_publisher_source_key', 'joint_command_rad')
+        alpha = float(record.get('interpolation_alpha', 0.0))
+        yield (
+            source_index,
+            next_source_index,
+            list(record['joint_command_rad']),
+            source_key,
+            alpha,
+        )
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser(description='Publish JSONL command positions as sensor_msgs/JointState to /cmdForJetson. This script never opens CAN.')
-    parser.add_argument('--command-log', required=True, help='JSONL command file containing joint_command_rad, position, or joint_positions_rad')
+    parser = argparse.ArgumentParser(
+        description='Publish JSONL command positions as sensor_msgs/JointState to /cmdForJetson. This script never opens CAN.')
+    parser.add_argument(
+        '--command-log', required=True,
+        help='JSONL command file containing joint_command_rad, position, or joint_positions_rad')
     parser.add_argument('--topic', default='/cmdForJetson')
-    parser.add_argument('--rate', type=float, required=True, help='Publish rate in Hz')
+    parser.add_argument('--rate', type=float, required=True,
+                        help='Transport target publish rate in Hz')
     parser.add_argument('--start-index', type=int, default=0)
-    parser.add_argument('--max-frames', type=int, default=None,
-                        help='Maximum number of source JSONL frames before interpolation')
-    parser.add_argument('--resample-factor', type=int, default=1,
-                        help='Linear interpolation factor between adjacent source frames. factor=1 preserves legacy behavior; factor=2 inserts one midpoint. Increase --rate by the same factor to preserve the source time scale.')
+    parser.add_argument(
+        '--max-frames', type=int, default=None,
+        help='Maximum number of source JSONL frames before interpolation')
+    parser.add_argument(
+        '--resample-factor', type=int, default=1,
+        help='Shared linear transport resampling factor. factor=1 preserves legacy behavior; factor=2 inserts one midpoint. Increase --rate by the same factor to preserve the source time scale.')
+    parser.add_argument(
+        '--segment-key', default='',
+        help='Optional source record key used to prevent transport interpolation across segment boundaries. Usually leave empty for hardware replay.')
     return parser.parse_args(argv)
 
 
@@ -124,11 +144,14 @@ def main(argv=None):
     rate = rospy.Rate(args.rate)
 
     count = 0
-    for source_index, next_source_index, position, source_key, alpha in iter_resampled_positions(
-            args.command_log,
-            start_index=args.start_index,
-            max_frames=args.max_frames,
-            resample_factor=args.resample_factor):
+    segment_key = args.segment_key.strip() or None
+    for source_index, next_source_index, position, source_key, alpha in \
+            iter_resampled_positions(
+                args.command_log,
+                start_index=args.start_index,
+                max_frames=args.max_frames,
+                resample_factor=args.resample_factor,
+                segment_key=segment_key):
         if rospy.is_shutdown():
             break
         msg = JointState()
