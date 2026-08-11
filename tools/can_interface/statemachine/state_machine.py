@@ -19,6 +19,7 @@ from sensor_msgs.msg import JointState
 NUM_LEGS = 24
 CONNECT_TIMEOUT_SEC = 3.0
 ALIGNMENT_TIMEOUT_SEC = 30.0
+ALIGNMENT_STANDBY_HEARTBEATS_TO_RECOVER = 2
 
 DEFAULT_HOME_STEP = 0.005
 HOME_STEP_MIN = 1e-6
@@ -97,6 +98,7 @@ class LegInfo(object):
         self.alignment_in_progress = False
         self.alignment_request_generation = 0
         self.alignment_deadline = 0.0
+        self.alignment_standby_heartbeat_count = 0
         self.initialization_error_latched = False
         self.last_error_code = None
         self.last_error_name = None
@@ -529,6 +531,7 @@ class StateMachine(object):
             leg.alignment_in_progress = True
             leg.alignment_request_generation = generation
             leg.alignment_deadline = now + ALIGNMENT_TIMEOUT_SEC
+            leg.alignment_standby_heartbeat_count = 0
             leg.awaiting_heartbeat = False
             self.set_leg_state(leg_id, "Aligning")
             sent.append(leg_id)
@@ -1199,6 +1202,7 @@ class StateMachine(object):
         leg.homed_in_current_session = False
         leg.alignment_in_progress = False
         leg.alignment_deadline = 0.0
+        leg.alignment_standby_heartbeat_count = 0
         leg.running_in_current_session = False
         leg.run_command_sent_in_current_session = False
         leg.diagnostic_run_command_sent = False
@@ -1280,14 +1284,39 @@ class StateMachine(object):
         leg = self.legs[leg_id]
         was_awaiting_heartbeat = leg.awaiting_heartbeat
 
-        # 0x0FF can still be received while an ALIGN request is in flight.
-        # Treat it only as connection freshness in that window. Cancelling the
-        # request here makes the following normal 0x100+axis result look stale.
+        # The MCU sends 0x0FF only in aliment_standby. One frame can still
+        # straddle the ALIGN command/state-transition boundary, so tolerate the
+        # first heartbeat while ALIGN is in flight. Repeated standby heartbeat
+        # means the MCU remained/returned to standby (for example after reset),
+        # so cancel only the PC-side ALIGN wait and reconnect for manual retry.
         if leg.alignment_in_progress:
             leg.connected = True
             leg.last_seen = now
             leg.heartbeat_seen_once = True
             leg.awaiting_heartbeat = False
+            leg.alignment_standby_heartbeat_count += 1
+            if (leg.alignment_standby_heartbeat_count
+                    < ALIGNMENT_STANDBY_HEARTBEATS_TO_RECOVER):
+                return
+            if self.error_latched or leg.runtime_error_latched:
+                return
+            rospy.logwarn(
+                "[ALIGN] leg=%d repeated standby heartbeat while Aligning -> "
+                "MCU is back in standby; reconnect for ALIGN retry",
+                leg_id)
+            leg.aligned = False
+            leg.homed = False
+            leg.aligned_in_current_session = False
+            leg.homed_in_current_session = False
+            leg.alignment_in_progress = False
+            leg.alignment_deadline = 0.0
+            leg.alignment_standby_heartbeat_count = 0
+            leg.running_in_current_session = False
+            leg.run_command_sent_in_current_session = False
+            leg.diagnostic_run_command_sent = False
+            leg.initialization_error_latched = False
+            leg.home_pos = 0.0
+            self.set_leg_state(leg_id, "Connected")
             return
 
         unexpected = (leg.aligned_in_current_session
@@ -1304,6 +1333,7 @@ class StateMachine(object):
             leg.homed_in_current_session = False
             leg.alignment_in_progress = False
             leg.alignment_deadline = 0.0
+            leg.alignment_standby_heartbeat_count = 0
             leg.running_in_current_session = False
             leg.run_command_sent_in_current_session = False
             leg.diagnostic_run_command_sent = False
@@ -1353,6 +1383,7 @@ class StateMachine(object):
 
         leg.alignment_in_progress = False
         leg.alignment_deadline = 0.0
+        leg.alignment_standby_heartbeat_count = 0
         leg.aligned = True
         leg.homed = False
         leg.running_in_current_session = False
