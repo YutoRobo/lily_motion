@@ -678,11 +678,19 @@ class StateMachine(object):
         if not self._is_active(leg_id):
             rospy.logwarn("[HOME] leg=%d is Use=False -> ignore set_home", leg_id)
             return False
-        reasons = self._home_blocking_reasons()
+        leg = self.legs[leg_id]
+        reasons = []
+        if self.error_latched:
+            reasons.append("mcu_error_latched")
+        if not leg.aligned_in_current_session:
+            reasons.append("leg%d_missing_aligned" % leg_id)
+        if leg.alignment_in_progress:
+            reasons.append("leg%d_alignment_in_progress" % leg_id)
+        if leg.initialization_error_latched:
+            reasons.append("leg%d_initialization_error" % leg_id)
         if reasons:
             rospy.logwarn("[HOME] SET HOME rejected: %s", ",".join(reasons))
             return False
-        leg = self.legs[leg_id]
         if not self.send_set_home_command(leg_id):
             return False
         leg.homed = True
