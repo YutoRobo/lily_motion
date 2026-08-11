@@ -116,6 +116,48 @@ class MultiActuatorIntegrationTest(unittest.TestCase):
         self.assertTrue(bridge.sm.legs[10].aligned_in_current_session)
         self.assertTrue(bridge.sm.legs[12].aligned_in_current_session)
 
+    def test_f_silent_reset_during_align_recovers_connected_then_manual_retry(self):
+        bridge = CanBridge((10,))
+        bridge.discover()
+        align_time = bridge.base + 0.01
+        self.assertEqual(
+            [10], bridge.sm.handle_alignment_request(now=align_time))
+        bridge.drain_pc_to_emulator(align_time)
+        leg = bridge.sm.legs[10]
+        actuator = bridge.emulator.actuators[10]
+        self.assertTrue(leg.alignment_in_progress)
+
+        # Simulate an MCU reset during ALIGN without delivering a 0x0EE first.
+        # The real MCU restarts standby heartbeat after boot; the first frame is
+        # tolerated as a transition-boundary heartbeat, while the second proves
+        # that the MCU is back in aliment_standby.
+        reset_time = bridge.base + 0.05
+        actuator.reset(reset_time, "test_silent_reset_during_align")
+        bridge.tick(reset_time)
+        self.assertTrue(leg.alignment_in_progress)
+        self.assertEqual(1, leg.alignment_standby_heartbeat_count)
+        self.assertEqual("Aligning", leg.state_str)
+
+        before_retry = len(bridge.pc_bus.sent)
+        bridge.tick(reset_time + 1.01)
+        self.assertFalse(leg.alignment_in_progress)
+        self.assertTrue(leg.connected)
+        self.assertEqual("Connected", leg.state_str)
+        self.assertFalse(leg.initialization_error_latched)
+        self.assertEqual(0, leg.alignment_standby_heartbeat_count)
+
+        # Recovery must never auto-send ALIGN.
+        self.assertEqual(before_retry, len(bridge.pc_bus.sent))
+
+        retry_time = reset_time + 1.02
+        self.assertEqual(
+            [10], bridge.sm.handle_alignment_request(now=retry_time))
+        bridge.drain_pc_to_emulator(retry_time)
+        self.assertEqual(before_retry + 1, len(bridge.pc_bus.sent))
+        bridge.tick(retry_time + 0.11)
+        self.assertTrue(leg.aligned_in_current_session)
+        self.assertEqual("Aligned", leg.state_str)
+
     def test_m_reset_after_run_invalidates_pc_session(self):
         bridge = CanBridge(
             (10,), {10: ActuatorScenario(reset_after_run_sec=0.2)})
