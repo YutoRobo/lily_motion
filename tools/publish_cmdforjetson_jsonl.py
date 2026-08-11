@@ -60,7 +60,7 @@ def iter_resampled_positions(path, start_index=0, max_frames=None,
     In general, N source records produce ``(N - 1) * factor + 1`` output
     positions when N > 0.
     """
-    factor = int(resample_factor or 1)
+    factor = int(resample_factor)
     if factor < 1:
         raise ValueError('resample_factor must be >= 1')
 
