@@ -9,8 +9,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from lily_motion_v3.command_timing import (
-    resample_transport_records,
+from lily_motion_v3.command_timing import resample_transport_records
+from lily_motion_v3.gazebo_actuator_interpolator import (
     simulate_linear_actuator_records,
     timing_relationship,
 )
@@ -26,16 +26,17 @@ def make_records(values):
     ]
 
 
-class CommandTimingTest(unittest.TestCase):
+class SharedTransportTimingTest(unittest.TestCase):
     def test_shared_transport_factor_two(self):
         records = resample_transport_records(
             make_records([0.0, 2.0, 4.0]), factor=2)
         values = [record['joint_command_rad'][0] for record in records]
         self.assertEqual([0.0, 1.0, 2.0, 3.0, 4.0], values)
 
+
+class GazeboActuatorInterpolatorTest(unittest.TestCase):
     def test_timing_relationship_is_not_hard_coded(self):
-        self.assertEqual(
-            'matched', timing_relationship(0.100, 0.100))
+        self.assertEqual('matched', timing_relationship(0.100, 0.100))
         self.assertEqual(
             'hold_after_interpolation', timing_relationship(0.120, 0.100))
         self.assertEqual(
@@ -77,9 +78,6 @@ class CommandTimingTest(unittest.TestCase):
              record['joint_command_rad'][0])
             for record in records)
         self.assertAlmostEqual(1.0 / 3.0, samples[1.5])
-        # At t=2.0 a new target arrives before the previous interpolation has
-        # completed.  The current MCU semantics restart from the old target,
-        # therefore the commanded value becomes exactly 1.0 here.
         self.assertAlmostEqual(1.0, samples[2.0])
 
     def test_non_integer_period_ratio_keeps_exact_final_target(self):
