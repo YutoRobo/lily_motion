@@ -60,14 +60,27 @@ def interpolate_position(position0, position1, alpha):
 
 
 def _selected_records(path, start_index=0, max_frames=None):
+    """Load selected source records while preserving their metadata."""
     records = []
-    for source_index, position, source_key in iter_positions(
-            path, start_index=start_index, max_frames=max_frames):
-        records.append({
-            'frame_index': source_index,
-            'joint_command_rad': list(position),
-            '_publisher_source_key': source_key,
-        })
+    emitted = 0
+    with open(path) as f:
+        for line_index, line in enumerate(f):
+            line = line.strip()
+            if not line:
+                continue
+            if line_index < start_index:
+                continue
+            record = json.loads(line)
+            position, source_key = extract_position(record, line_index)
+            normalized = dict(record)
+            normalized['joint_command_rad'] = list(position)
+            normalized.setdefault(
+                'frame_index', normalized.get('command_index', line_index))
+            normalized['_publisher_source_key'] = source_key
+            records.append(normalized)
+            emitted += 1
+            if max_frames is not None and emitted >= max_frames:
+                break
     return records
 
 
@@ -78,6 +91,8 @@ def iter_resampled_positions(path, start_index=0, max_frames=None,
     ``start_index`` and ``max_frames`` select source JSONL records first.
     ``resample_factor=1`` preserves the legacy publisher output.
     ``resample_factor=2`` inserts one midpoint between adjacent source records.
+    Source metadata such as ``roll_index`` is retained so future segment-aware
+    replay remains available without introducing another command format.
     """
     factor = int(resample_factor)
     if factor < 1:
