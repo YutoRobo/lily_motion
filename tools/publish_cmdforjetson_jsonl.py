@@ -18,6 +18,7 @@ from __future__ import division, print_function
 import argparse
 import os
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
@@ -99,9 +100,29 @@ def parse_args(argv):
     parser.add_argument(
         '--segment-key', default='',
         help='Optional source metadata key used to prevent interpolation across segment boundaries')
+    parser.add_argument(
+        '--subscriber-wait-timeout-sec', type=float, default=5.0,
+        help='Before the first frame, wait this many wall-clock seconds for at least one /cmdForJetson subscriber. Set 0 to disable.')
     parser.add_argument('--dry-run', action='store_true',
                         help='Build and report the exact /cmdForJetson stream without ROS publishing')
     return parser.parse_args(argv)
+
+
+def _wait_for_subscriber(pub, rospy, timeout_sec):
+    timeout_sec = float(timeout_sec)
+    if timeout_sec <= 0.0:
+        return True
+    deadline = time.time() + timeout_sec
+    while not rospy.is_shutdown() and time.time() < deadline:
+        count = int(pub.get_num_connections())
+        if count >= 1:
+            if count > 1:
+                rospy.logwarn(
+                    'output topic has %d subscribers; verify only intended consumers are active',
+                    count)
+            return True
+        time.sleep(0.05)
+    return int(pub.get_num_connections()) >= 1
 
 
 def main(argv=None):
@@ -114,6 +135,8 @@ def main(argv=None):
         raise SystemExit('--max-frames must be positive when provided')
     if args.resample_factor < 1:
         raise SystemExit('--resample-factor must be >= 1')
+    if args.subscriber_wait_timeout_sec < 0.0:
+        raise SystemExit('--subscriber-wait-timeout-sec must be >= 0')
 
     segment_key = args.segment_key.strip() or None
     source_records, transport_records = prepare_transport_stream(
@@ -139,6 +162,16 @@ def main(argv=None):
 
     rospy.init_node('publish_cmdforjetson_jsonl', anonymous=True)
     pub = rospy.Publisher(args.topic, JointState, queue_size=10)
+    if not _wait_for_subscriber(
+            pub, rospy, args.subscriber_wait_timeout_sec):
+        rospy.logerr(
+            'no subscriber connected to %s within %.3f sec; no command frames were published',
+            args.topic, args.subscriber_wait_timeout_sec)
+        return 2
+
+    rospy.loginfo(
+        'subscriber connected to %s; starting shared command stream',
+        args.topic)
     rate = rospy.Rate(args.rate)
 
     count = 0
