@@ -18,7 +18,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
-RUNNER_PATH = os.path.join(ROOT, 'tools', 'run_v3_0_command_stream.py')
+PUBLISHER_PATH = os.path.join(ROOT, 'tools', 'publish_cmdforjetson_jsonl.py')
 
 from lily_motion_v3.command_stream import (
     prepare_transport_stream,
@@ -39,7 +39,8 @@ def load_source(name, path):
 class SharedCommandStreamTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.runner = load_source('shared_command_stream_runner_under_test', RUNNER_PATH)
+        cls.publisher = load_source(
+            'shared_jsonl_publisher_under_test', PUBLISHER_PATH)
 
     def _make_log(self):
         handle = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -59,7 +60,7 @@ class SharedCommandStreamTest(unittest.TestCase):
         buffer = StringIO()
         try:
             sys.stdout = buffer
-            result = self.runner.main(argv)
+            result = self.publisher.main(argv)
         finally:
             sys.stdout = previous
         return result, buffer.getvalue()
@@ -95,29 +96,24 @@ class SharedCommandStreamTest(unittest.TestCase):
             transport_stream_sha256(transport1),
             transport_stream_sha256(transport2))
 
-    def test_jetson_and_gazebo_dry_run_use_identical_transport_stream(self):
+    def test_canonical_publisher_reports_exact_shared_stream_digest(self):
         path = self._make_log()
-        common = [
-            '--command-log', path,
-            '--transport-resample-factor', '2',
-            '--transport-rate', '10',
-            '--dry-run',
-        ]
         try:
-            _result, jetson_output = self._run_and_capture(
-                ['--backend', 'jetson'] + common)
-            _result, gazebo_output = self._run_and_capture(
-                ['--backend', 'gazebo'] + common + [
-                    '--actuator-interp-duration-sec', '0.100',
-                    '--actuator-update-period-sec', '0.002',
-                ])
+            _source, transport = prepare_transport_stream(
+                path, resample_factor=2)
+            expected = transport_stream_sha256(transport)
+            result, output = self._run_and_capture([
+                '--command-log', path,
+                '--resample-factor', '2',
+                '--rate', '10',
+                '--dry-run',
+            ])
         finally:
             os.unlink(path)
-        self.assertEqual(
-            self._extract_digest(jetson_output),
-            self._extract_digest(gazebo_output))
-        self.assertIn('backend=jetson', jetson_output)
-        self.assertIn('backend=gazebo', gazebo_output)
+        self.assertEqual(0, result)
+        self.assertEqual(expected, self._extract_digest(output))
+        self.assertIn('output_topic=/cmdForJetson', output)
+        self.assertNotIn('backend=', output)
 
 
 if __name__ == '__main__':
