@@ -1279,12 +1279,22 @@ class StateMachine(object):
             now = time.time()
         leg = self.legs[leg_id]
         was_awaiting_heartbeat = leg.awaiting_heartbeat
+
+        # 0x0FF can still be received while an ALIGN request is in flight.
+        # Treat it only as connection freshness in that window. Cancelling the
+        # request here makes the following normal 0x100+axis result look stale.
+        if leg.alignment_in_progress:
+            leg.connected = True
+            leg.last_seen = now
+            leg.heartbeat_seen_once = True
+            leg.awaiting_heartbeat = False
+            return
+
         unexpected = (leg.aligned_in_current_session
                       or leg.homed_in_current_session
                       or leg.run_command_sent_in_current_session
                       or leg.diagnostic_run_command_sent
                       or (self.is_run and self._is_active(leg_id)))
-        reset_during_align = leg.alignment_in_progress
 
         if unexpected:
             rospy.logwarn("leg%d_unexpected_heartbeat_after_alignment", leg_id)
@@ -1301,12 +1311,6 @@ class StateMachine(object):
             if (self.is_run or self.motion_check_active) and self._is_active(leg_id):
                 self.handle_stop_request(
                     "unexpected_heartbeat_after_alignment_leg_%d" % leg_id)
-        elif reset_during_align:
-            rospy.logwarn("[ALIGN] leg=%d heartbeat while Aligning -> retry required",
-                          leg_id)
-            leg.alignment_in_progress = False
-            leg.alignment_deadline = 0.0
-            leg.initialization_error_latched = True
 
         first_discovery = not leg.discovered_once_in_current_session
         leg.discovered_once_in_current_session = True
