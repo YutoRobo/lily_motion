@@ -1,0 +1,26 @@
+{
+  "name": "example_middle_swing_tuning_not_exact_v3_0_44_reproduction",
+  "expected_roll_count": 4,
+  "output_dir": "testdata/generated_roll_candidates/example_middle_swing_tuning",
+  "generator_argv": [
+    "{python}",
+    "archive/v3_experiment_scripts/run_v3_0_43c_middle_swing_y_bump_sweep.py",
+    "--surface-sequence", "1,5,6,2,1",
+    "--move-dist", "0.40",
+    "--middle-swing-y-escapes", "0.20",
+    "--middle-swing-y-escape-modes", "outward",
+    "--middle-swing-y-escape-phases", "rf3_only",
+    "--resample-factor", "8",
+    "--smooth-window", "40",
+    "--save-top-n", "1",
+    "--output", "{output_dir}/sweep_summary.json",
+    "--candidate-output-dir", "{output_dir}/candidates"
+  ],
+  "generated_command_log": "{output_dir}/candidates/candidate_01_x8_sw40_commands.jsonl",
+  "quarter_stage_output_dir": "{output_dir}/staged",
+  "notes": [
+    "This is an editable tuning example, not a claim of exact reproduction of v3.0.44 candidate_022_wide_urdf0p075.",
+    "Change numeric generator arguments here, regenerate under testdata, validate in Gazebo, and only then consider promotion to data/reference_candidates.",
+    "The semantic stage builder derives 1/4..4/4 boundaries from roll_index; it does not divide the frame count by four."
+  ]
+}
