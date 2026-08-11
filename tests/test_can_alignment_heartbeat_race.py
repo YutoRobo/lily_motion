@@ -100,12 +100,13 @@ class AlignmentHeartbeatRaceTest(unittest.TestCase):
         self.sm.handle_connection_ping(10, now=0.0)
         self.assertEqual([10], self.sm.handle_alignment_request(now=1.0))
 
-    def test_heartbeat_during_alignment_keeps_request_alive(self):
+    def test_first_heartbeat_during_alignment_keeps_request_alive(self):
         leg = self.sm.legs[10]
         deadline = leg.alignment_deadline
         generation = leg.alignment_request_generation
         self.assertTrue(leg.alignment_in_progress)
         self.assertEqual("Aligning", leg.state_str)
+        self.assertEqual(0, leg.alignment_standby_heartbeat_count)
 
         self.sm.handle_connection_ping(10, now=2.0)
 
@@ -114,17 +115,49 @@ class AlignmentHeartbeatRaceTest(unittest.TestCase):
         self.assertTrue(leg.alignment_in_progress)
         self.assertEqual(deadline, leg.alignment_deadline)
         self.assertEqual(generation, leg.alignment_request_generation)
+        self.assertEqual(1, leg.alignment_standby_heartbeat_count)
         self.assertFalse(leg.initialization_error_latched)
         self.assertEqual("Aligning", leg.state_str)
 
         self.assertTrue(self.sm.handle_alignment_result(10, 1, now=3.0))
         self.assertTrue(leg.aligned_in_current_session)
         self.assertFalse(leg.alignment_in_progress)
+        self.assertEqual(0, leg.alignment_standby_heartbeat_count)
         self.assertEqual("Aligned", leg.state_str)
 
         self.sm.execute(now=100.0)
         self.assertTrue(leg.aligned_in_current_session)
         self.assertEqual("Aligned", leg.state_str)
+
+    def test_second_heartbeat_during_alignment_recovers_connected(self):
+        leg = self.sm.legs[10]
+        sent_before_heartbeats = len(self.bus.sent)
+
+        self.sm.handle_connection_ping(10, now=2.0)
+        self.assertTrue(leg.alignment_in_progress)
+        self.assertEqual("Aligning", leg.state_str)
+
+        self.sm.handle_connection_ping(10, now=3.0)
+
+        self.assertTrue(leg.connected)
+        self.assertFalse(leg.alignment_in_progress)
+        self.assertEqual(0.0, leg.alignment_deadline)
+        self.assertEqual(0, leg.alignment_standby_heartbeat_count)
+        self.assertFalse(leg.aligned_in_current_session)
+        self.assertFalse(leg.homed_in_current_session)
+        self.assertFalse(leg.initialization_error_latched)
+        self.assertFalse(leg.awaiting_heartbeat)
+        self.assertEqual("Connected", leg.state_str)
+
+        # Recovery itself must not automatically re-send ALIGN.
+        self.assertEqual(sent_before_heartbeats, len(self.bus.sent))
+
+        # Operator can explicitly start ALIGN again in the same StateMachine session.
+        self.assertEqual([10], self.sm.handle_alignment_request(now=4.0))
+        self.assertTrue(leg.alignment_in_progress)
+        self.assertEqual(0, leg.alignment_standby_heartbeat_count)
+        self.assertEqual("Aligning", leg.state_str)
+        self.assertEqual(sent_before_heartbeats + 1, len(self.bus.sent))
 
     def test_run_heartbeat_safety_behavior_is_unchanged(self):
         self.assertTrue(self.sm.handle_alignment_result(10, 1, now=2.0))
