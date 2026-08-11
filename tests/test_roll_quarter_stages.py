@@ -2,19 +2,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import imp
 import json
 import os
 import shutil
-import sys
 import tempfile
 import unittest
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from tools import build_roll_quarter_stages as quarter
-from tools import run_roll_quarter_stage as runner
+quarter = imp.load_source('build_roll_quarter_stages', os.path.join(ROOT, 'tools', 'build_roll_quarter_stages.py'))
+runner = imp.load_source('run_roll_quarter_stage', os.path.join(ROOT, 'tools', 'run_roll_quarter_stage.py'))
 
 
 def record(roll_index, value=0.0):
