@@ -1,22 +1,55 @@
 # Archive
 
-このディレクトリは、過去検討・旧実験・非現行スクリプト・旧testdataの保管用です。
+`archive/` は過去検討、旧実験、非現行runner、旧文書の保管用である。
 
-現行の実機運用では、ここにあるスクリプトやデータは実行対象ではありません。
+## Rule
 
-現行の実行対象は主に以下です。
+**archive内の内容を、現在の実機操作の入口として使用しない。**
 
-- tools/can_interface/
-- tools/publish_cmdforjetson_jsonl.py
-- tools/gazebo/run_v3_0_gazebo_touchdown_pose_check.py
-- data/reference_candidates/v3_0_42c_candidate_02_softlimit_94p8/commands.jsonl
-- testdata/hardware_trial_air_entry_only/
-- testdata/entry_touchdown_roll_sequence/
-- docs/HARDWARE_OPERATION_PROCEDURE.md
-- docs/HARDWARE_PRETEST_STATUS.md
+現在のruntimeやcandidateはarchive文書に重複記載しない。現行情報は常に次を参照する。
 
-# Archive
+- [`../README.md`](../README.md)
+- [`../docs/RUNTIME_ARCHITECTURE.md`](../docs/RUNTIME_ARCHITECTURE.md)
+- [`../docs/HARDWARE_OPERATION_PROCEDURE.md`](../docs/HARDWARE_OPERATION_PROCEDURE.md)
+- [`../docs/BASELINE.md`](../docs/BASELINE.md)
 
-Files under `archive/` are retained for historical reference, reproducibility, and old experiment review.
+## Contents
 
-Scripts under `archive/v3_experiment_scripts/` are not part of the current pre-hardware operation path and must not be used for current hardware execution. Use maintained runtime tools under `tools/` instead.
+```text
+archive/v3_experiment_scripts/
+```
+
+過去のsweep、旧candidate生成、旧Gazebo replay、旧評価runnerなど。
+
+```text
+archive/docs_legacy/
+```
+
+過去時点の設計note、experiment log、旧operation文書。
+
+これらはtraceability / reproductionのため残す。
+
+## Current-vs-history
+
+古い文書中の次の表現は、その文書作成時点の意味で読む。
+
+```text
+current baseline
+current provisional baseline
+current hardware candidate
+approved rate
+```
+
+2026-08-12以降のcurrent statusを意味しない。
+
+## Stale staged wrapper
+
+common `/cmdForJetson` architecture成立前の `tools/run_hardware_staged_manual.sh` はarchiveへ移設する。
+
+このwrapperは:
+
+- old candidate path
+- old hardware/Gazebo rate
+- separate Gazebo direct replay path
+
+を含むため、現行hardware operationには使用しない。
