@@ -1278,6 +1278,7 @@ class StateMachine(object):
         if now is None:
             now = time.time()
         leg = self.legs[leg_id]
+        was_awaiting_heartbeat = leg.awaiting_heartbeat
         unexpected = (leg.aligned_in_current_session
                       or leg.homed_in_current_session
                       or leg.run_command_sent_in_current_session
@@ -1317,7 +1318,14 @@ class StateMachine(object):
         leg.heartbeat_seen_once = True
         leg.awaiting_heartbeat = False
         self.set_leg_state(leg_id, "Connected")
-        rospy.loginfo("[CONN] leg=%d standby heartbeat; ready for ALIGN", leg_id)
+        if first_discovery:
+            rospy.loginfo(
+                "[CONN] leg=%d standby heartbeat discovered; ready for ALIGN",
+                leg_id)
+        elif was_awaiting_heartbeat:
+            rospy.loginfo(
+                "[CONN] leg=%d standby heartbeat recovered; ready for ALIGN",
+                leg_id)
 
     def handle_alignment_result(self, leg_id, success_flag, now=None):
         if now is None:
