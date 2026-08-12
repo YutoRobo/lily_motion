@@ -17,12 +17,13 @@ Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリ�
 |---|---|
 | プロジェクト全体を知りたい | この `README.md` |
 | 文書の役割・読む順番を知りたい | [`docs/README.md`](docs/README.md) |
+| コマンドをそのままコピーして実行したい | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
 | 現在のcandidate / baselineを知りたい | [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) |
 | 現在どこまで検証済みか | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
 | motion生成・評価programを使いたい | [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md) |
 | JSONLを新しく作りたい | [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) |
 | 実機を動かしたい | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
-| 実行コマンドを探したい | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
+| commandの意味や選び方を調べたい | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
 | Gazebo / 実機のruntimeを理解したい | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
 | JSONL field / candidate data仕様を知りたい | [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) |
 | 関節可動域を確認したい | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
@@ -188,7 +189,7 @@ semantic quarter / full sequence
 
 正確な順序、STOP条件、安全確認は [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を使用する。
 
-コマンドを探すだけの場合は [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) を使用する。
+コマンドをそのままコピーして実行する場合は [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) を使用する。commandの意味や別の操作を調べる場合は [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) を使用する。
 
 ---
 
@@ -228,7 +229,8 @@ lily_motion/
 | motion開発programの使い方 | `docs/MOTION_DEVELOPMENT_GUIDE.md` |
 | JSONLの作成手順 | `docs/JSONL_CREATION_GUIDE.md` |
 | 実機試験順序 / safety | `docs/HARDWARE_OPERATION_PROCEDURE.md` |
-| exact commands | `docs/COMMAND_REFERENCE.md` |
+| copy-paste用commands | `docs/COPY_PASTE_COMMANDS.md` |
+| commandの意味 / 詳細索引 | `docs/COMMAND_REFERENCE.md` |
 | runtime architecture | `docs/RUNTIME_ARCHITECTURE.md` |
 | JSON / JSONL / candidate data contract | `docs/COMMAND_DATA_FORMAT.md` |
 | hardware joint limits | `docs/HARDWARE_LIMITS.md` |
@@ -282,5 +284,5 @@ docs/VALIDATION_STATUS.md
   ↓
 docs/HARDWARE_OPERATION_PROCEDURE.md
   ↓
-docs/COMMAND_REFERENCE.md
+docs/COPY_PASTE_COMMANDS.md
 ```
