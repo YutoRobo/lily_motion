@@ -3,11 +3,145 @@
 更新日: 2026-08-12  
 対象: `master`（pre-hardware baseline以降）
 
-本リポジトリは、Lily 8脚ロボットの回転歩容生成、運動学、制約評価、Gazebo検証、ROS指令配信、CAN状態機械、操作UI、段階実機試験をまとめたソフトウェア一式である。
+本リポジトリは、Lily 8脚ロボットの**回転移動**を中心に、運動生成、運動学、制約評価、Gazebo検証、ROS指令配信、CAN状態機械、操作UI、段階実機試験をまとめたソフトウェア一式である。
 
-このREADMEは「現在どの経路を使うか」を示す入口である。実機操作は必ず [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) に従う。
+このREADMEは、Lilyを初めて見る人が
 
-## 1. 現在の基準
+```text
+何をするロボットか
+→ どのデータが軌道か
+→ どのプログラムが実行経路か
+→ Gazeboと実機がどこまで共通か
+→ 現在どこまで検証済みか
+→ 次にどの文書を読むべきか
+```
+
+を把握するための入口である。
+
+実機を操作する場合は、READMEだけで判断せず、必ず [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) に従う。
+
+---
+
+## 1. Lilyとは
+
+Lilyは、**8脚 × 各3自由度 = 24軸**を持つロボットである。
+
+各脚は概念上:
+
+```text
+body
+ └─ base / yaw
+     └─ thigh / pitch
+         └─ tibia / pitch
+```
+
+の3関節で構成される。
+
+軸番号は基本的に:
+
+```text
+axis = 3 × leg_index + joint_index
+```
+
+で対応する。
+
+例:
+
+```text
+axis9  = leg3 base
+axis10 = leg3 thigh
+axis11 = leg3 tibia
+```
+
+現在の実機hard gate:
+
+| joint index | name | hard gate |
+|---:|---|---:|
+| 0 | base / yaw | ±360 deg |
+| 1 | thigh / pitch | ±95 deg |
+| 2 | tibia / pitch | ±150 deg |
+
+現在の共有geometry:
+
+```text
+coxa  = 0.075 m
+thigh = 0.300 m
+tibia = 0.300 m
+```
+
+詳細:
+
+- [`lily_motion_v3/robot_geometry.py`](lily_motion_v3/robot_geometry.py)
+- [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md)
+
+---
+
+## 2. このプロジェクトでいう「回転」とは
+
+本プロジェクトの主対象は通常の脚歩行だけではなく、**脚を使って本体を次の面へ倒し、連続的に転がる回転移動**である。
+
+概念的には:
+
+```text
+現在の支持姿勢
+   ↓
+支持脚・遊脚を切り替える
+   ↓
+次の面へ移るための脚姿勢を作る
+   ↓
+本体をrollさせる
+   ↓
+次の支持姿勢
+```
+
+を1つのroll blockとして扱い、それらを接続して連続回転を構成する。
+
+command recordには、動作を追跡するために例えば:
+
+```text
+roll_index
+phase_name
+surface_start
+surface_after
+```
+
+等のmetadataが含まれることがある。
+
+これらは「どの回転・どのphaseか」を示す情報であり、**実機へ送る24軸position値そのものは `joint_command_rad`** である。
+
+過去のRF-1〜RF-6や各種sweep/constraint検討の詳細は `docs/v3_0_*` の履歴noteに残っているが、現在の実機operationはcurrent authoritative documentsを優先する。
+
+---
+
+## 3. 開発から実行までの全体像
+
+Lilyの回転アルゴリズムは、最終的に24軸のcommand sequenceへ変換して実行する。
+
+```text
+motion algorithm / parameters
+        ↓
+command generation
+        ↓
+candidate command sequence
+        ↓
+diagnostics / geometry / Gazebo evaluation
+        ↓
+reference candidate freeze
+        ↓
+staged command files
+        ↓
+canonical command transport
+        ↓
+/cmdForJetson
+        ↓
+real hardware or Gazebo MCU-equivalent path
+```
+
+重要なのは、**軌道生成・candidate評価**と、**freeze後の実行transport**を分けて考えることである。
+
+---
+
+## 4. 現在のreference candidate
 
 現在のpre-hardware回転候補:
 
@@ -28,7 +162,143 @@ Gazebo full-roll review   PASS
 hardware full roll        NOT TESTED
 ```
 
-2026-08-12の実機直前ソフトウェアbaseline:
+candidate directoryの主要構造:
+
+```text
+v3_0_44_candidate_022_wide_urdf0p075/
+├── README.md
+├── commands.jsonl
+├── manifest.json
+├── summary.json
+├── pre_hardware_decision.md
+├── staged/
+│   ├── air_entry_and_hold_only_commands.jsonl
+│   ├── combined_with_hold_commands.jsonl
+│   ├── roll_0_50_commands.jsonl
+│   ├── roll_50_100_commands.jsonl
+│   ├── roll_100_300_commands.jsonl
+│   └── roll_300_end_commands.jsonl
+└── reports/
+```
+
+### 主要ファイルの意味
+
+```text
+commands.jsonl
+  = frozen source trajectory / source keyframes
+
+manifest.json
+  = candidateのidentity / provenance / 採用根拠
+
+summary.json
+  = candidate packageの索引 / staged file範囲 / checksum要約
+
+pre_hardware_decision.md
+  = 人間向けの採用判断と実機試験順序
+
+staged/*.jsonl
+  = 段階実機試験用の実行単位
+
+reports/
+  = 診断・比較・評価証跡
+```
+
+JSON / JSONLのfield、source recordとtransport recordの違い、checksumの意味は:
+
+- [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md)
+
+を参照する。
+
+---
+
+## 5. JSONL command recordの最小理解
+
+`.jsonl` は**1行 = 1 command record**である。
+
+代表例:
+
+```json
+{
+  "frame_index": 0,
+  "joint_command_rad": [0.0, 0.0, "... 24 axes ..."],
+  "joint_command_deg": [0.0, 0.0, "..."],
+  "roll_index": -1,
+  "phase_name": "AIR_ENTRY_HOME_TO_CANDIDATE02_START"
+}
+```
+
+実行上の最重要field:
+
+```text
+joint_command_rad
+```
+
+- exactly 24 values
+- unit: rad
+- `/cmdForJetson.position` へ送るposition source
+
+`joint_command_deg`, `phase_name`, `roll_index`, `base_pose` 等は主にhuman-readable / traceability / diagnostics用metadataである。
+
+canonical publisherは互換性のため:
+
+```text
+joint_command_rad
+position
+joint_positions_rad
+```
+
+のいずれかを受理し、内部で24要素の `joint_command_rad` へ正規化する。
+
+---
+
+## 6. Source trajectory と transportは別
+
+frozen `commands.jsonl` / `staged/*.jsonl` はsource command recordsである。
+
+現在の実機試験候補transport profile:
+
+```text
+resample-factor = 2
+transport rate  = 10 Hz
+```
+
+factor 2では、隣接source target間にlinear midpointを1つ追加する。
+
+```text
+source:
+q0 -------- q1 -------- q2
+
+transport:
+q0 -- m01 -- q1 -- m12 -- q2
+```
+
+これはfrozen JSONLを書き換える処理ではない。
+
+さらに、transportの下流で実MCUがactuator-side interpolationを行う。
+
+Gazeboで実MCU相当として使用したprofile:
+
+```text
+interpolation duration = 0.100 s
+update period          = 0.002 s
+```
+
+したがって:
+
+```text
+source trajectory resolution
+transport resampling / target rate
+MCU interpolation duration
+MCU internal update period
+```
+
+は**別々の概念・別々の設定**である。
+
+---
+
+## 7. 2026-08-12 pre-hardware baseline
+
+実機直前ソフトウェアbaseline:
 
 ```text
 commit:
@@ -41,30 +311,21 @@ record:
 docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md
 ```
 
-現在の実機試験候補transport profile:
+current baseline入口:
 
-```text
-resample-factor = 2
-transport rate  = 10 Hz
-```
+- [`docs/BASELINE.md`](docs/BASELINE.md)
 
-Gazeboで実MCU相当として使用した補間profile:
+このbaselineはtrajectory candidateそのものを変更せず、実機直前のsoftware / transport / Gazebo validation条件を固定した記録である。
 
-```text
-interpolation duration = 0.100 s
-update period          = 0.002 s
-```
+---
 
-これらは別々の設定であり、将来のMCU変更時にも独立して変更できる設計とする。
+## 8. 最重要: 現行runtime architecture
 
-## 2. 最重要: 現行runtime architecture
-
-実機とGazeboは、`/cmdForJetson` まで同じプログラム・同じ指令列を使う。
+実機とGazeboは、**`/cmdForJetson` まで同じprogram path・同じtransport command stream**を使う。
 
 ```text
                  ┌──────────────────────────────────┐
                  │          completely shared       │
-                 │                                  │
 staged/frozen JSONL
         ↓
 tools/publish_cmdforjetson_jsonl.py
@@ -96,18 +357,52 @@ statemachine/StateMachine            mcu_position_interpolator_node.py
 
 - [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md)
 
-重要:
+原則:
 
-- canonical publisherにはGazebo backend分岐を作らない。
+- canonical publisherにGazebo backend分岐を作らない。
 - Gazebo試験時はCAN StateMachineを起動しない。
 - 実機試験時はGazebo MCU補間nodeを起動しない。
-- `/cmdForJetson` に複数の意図しないconsumerを同時接続しない。
+- `/cmdForJetson` に意図しない複数consumerを同時接続しない。
 
-## 3. Gazeboの2種類の使い方
+---
 
-### 3.1 実機等価経路の検証
+## 9. 本番位置指令interface
 
-実機へ送るのと同じ `/cmdForJetson` streamを検証するときは、次の2プログラムを使う。
+```text
+Topic: /cmdForJetson
+Message: sensor_msgs/JointState
+position length: exactly 24
+unit: rad
+```
+
+canonical JSONL publisher:
+
+```text
+tools/publish_cmdforjetson_jsonl.py
+```
+
+主な機能:
+
+- JSONL source positionの24要素validation / normalization
+- linear transport resampling
+- `--resample-factor`
+- `--rate`
+- `--start-index`
+- `--max-frames`
+- `--segment-key`
+- `--dry-run`
+- first publish前のsubscriber待ち
+- transport stream SHA256表示
+- CANを直接開かない
+- Gazebo固有処理を持たない
+
+---
+
+## 10. Gazeboの2種類の使い方
+
+### 10.1 実機等価経路の検証
+
+実機へ送るのと同じ `/cmdForJetson` streamを検証するときは次を使う。
 
 Terminal A:
 
@@ -127,7 +422,7 @@ python2 tools/publish_cmdforjetson_jsonl.py \
   --rate 10
 ```
 
-2026-08-12にこの経路で、
+2026-08-12にこの経路で:
 
 ```text
 HOME → air-entry
@@ -139,84 +434,21 @@ HOME → air-entry
 
 を順に確認し、全区間PASSした。
 
-### 3.2 開発・診断用direct Gazebo replay
+### 10.2 開発・診断用direct Gazebo replay
 
 ```text
 tools/gazebo/run_v3_0_gazebo_replay.py
 ```
 
-は、軌道生成中の目視、診断、履歴再現に使用できる。
+はtrajectory開発・目視・診断・履歴再現に使用する。
 
-ただしこれは `/cmdForJetson → MCU-equivalent interpolation` の正式な実機等価経路とは別である。実機との対応確認では3.1を使用する。
+これはformal hardware-equivalent pathではない。
 
-## 4. 本番位置指令interface
+---
 
-```text
-Topic: /cmdForJetson
-Message: sensor_msgs/JointState
-position length: exactly 24
-unit: rad
-```
+## 11. 現行コードの場所
 
-canonical JSONL publisher:
-
-```text
-tools/publish_cmdforjetson_jsonl.py
-```
-
-主な機能:
-
-- `joint_command_rad` / `position` / `joint_positions_rad` を24要素へ正規化
-- source frameを保持したlinear transport resampling
-- `--resample-factor`
-- `--rate`
-- `--start-index`
-- `--max-frames`
-- `--dry-run`
-- 最初のpublish前にsubscriber接続待ち
-- transport stream SHA256表示
-- CANを直接開かない
-
-## 5. ロボット表現
-
-```text
-8 legs × 3 DOF = 24 axes
-```
-
-| joint index | name | current hard gate |
-|---:|---|---:|
-| 0 | base / yaw | ±360 deg |
-| 1 | thigh / pitch | ±95 deg |
-| 2 | tibia / pitch | ±150 deg |
-
-```text
-axis = 3 × leg_index + joint_index
-```
-
-例:
-
-```text
-axis9  = leg3 base
-axis10 = leg3 thigh
-axis11 = leg3 tibia
-```
-
-現在の共有geometry:
-
-```text
-coxa  = 0.075 m
-thigh = 0.300 m
-tibia = 0.300 m
-```
-
-source:
-
-- [`lily_motion_v3/robot_geometry.py`](lily_motion_v3/robot_geometry.py)
-- [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md)
-
-## 6. 現行コード
-
-### Motion / evaluation
+### Motion / kinematics / evaluation
 
 ```text
 lily_motion_v3/
@@ -237,13 +469,16 @@ tools/publish_cmdforjetson_jsonl.py
 ```text
 tools/gazebo/mcu_position_interpolator_node.py
 lily_motion_v3/gazebo_actuator_interpolator.py
+```
 
-development / diagnostics:
+開発・診断:
+
+```text
 tools/gazebo/run_v3_0_gazebo_replay.py
 tools/gazebo/run_v3_0_gazebo_touchdown_pose_check.py
 ```
 
-### Hardware CAN
+### Hardware CAN / UI
 
 ```text
 tools/can_interface/statemachine/main.py
@@ -260,34 +495,38 @@ tools/publish_cmdforjetson_mapped_axis_replay.py
 tools/publish_cmdforjetson_jsonl.py
 ```
 
-## 7. Current vs historical
+---
 
-現行実機運用では次を直接実行しない。
+## 12. Current vs historical data
+
+現行実機operationでは次を直接実行しない。
 
 ```text
 archive/
 external/can_interface/
 ```
 
-`archive/` は再現・履歴参照用、`external/` は外部由来・旧snapshotである。
-
-正式な候補は:
+用途:
 
 ```text
 data/reference_candidates/
-```
+  = freeze済みreference candidate
 
-生成途中・評価結果は主に:
-
-```text
 testdata/
+  = 生成途中・評価結果・比較・診断・試験証跡
+
+archive/
+  = 過去実験・旧runner・旧資料・再現用
+
+external/
+  = 外部由来・旧snapshot
 ```
 
-に置く。
+`testdata/` にあるファイルが自動的に正式candidateという意味ではない。
 
-## 8. 実機試験の基本順
+---
 
-既知正常の旧6脚歩行系と、現行masterのCAN＋回転系は別ソフトとして扱う。
+## 13. 実機試験の基本順
 
 現行回転系:
 
@@ -309,7 +548,9 @@ full rollから開始しない。
 
 - [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md)
 
-## 9. 現在の検証状態
+---
+
+## 14. 現在の検証状態
 
 ### Software / Gazebo
 
@@ -341,41 +582,91 @@ full roll                           not yet confirmed
 
 - [`docs/HARDWARE_PRETEST_STATUS.md`](docs/HARDWARE_PRETEST_STATUS.md)
 
-## 10. 安全原則
+---
 
-- 実機時は物理非常停止を即時操作できる状態にする。
+## 15. 安全原則
+
+- 実機時はphysical emergency isolationを即時操作できる状態にする。
 - 可動範囲へ人を入れない。
-- 対象外軸は `Use=False`。
+- 対象外axisは `Use=False`。
 - ALIGN / HOME方向 / SET HOME姿勢を確認する。
 - single-axis → one-leg → staged rollの順序を飛ばさない。
 - Gazebo試験時にCAN StateMachineを同時起動しない。
 - 実機試験時にGazebo MCU nodeを同時起動しない。
 - `archive/` の旧runnerを現行操作に使わない。
 - frozen candidate JSONLを直接編集しない。
-- transport profileを変更した場合は新baselineとして記録する。
+- transport profileを変更した場合はnew baselineとして記録する。
 
-## 11. 文書
+---
 
-現行の正本:
+## 16. 初見者向け文書の読み順
 
-- [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md): runtime境界とタイミング設計
+### 全体を理解したい
+
+```text
+README.md
+  ↓
+docs/RUNTIME_ARCHITECTURE.md
+  ↓
+docs/COMMAND_DATA_FORMAT.md
+  ↓
+README_V3_CORE.md
+```
+
+### current candidateを理解したい
+
+```text
+README.md
+  ↓
+docs/COMMAND_DATA_FORMAT.md
+  ↓
+data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/README.md
+  ↓
+manifest.json / summary.json
+  ↓
+pre_hardware_decision.md
+```
+
+### 実機を動かしたい
+
+```text
+README.md
+  ↓
+docs/BASELINE.md
+  ↓
+docs/HARDWARE_PRETEST_STATUS.md
+  ↓
+docs/HARDWARE_OPERATION_PROCEDURE.md
+  ↓
+docs/Lily_8leg_Robot_Command_Reference.md
+```
+
+---
+
+## 17. 現行authoritative documents
+
+- [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md): runtime境界とtiming設計
+- [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md): JSON / JSONL / candidate data仕様
 - [`docs/BASELINE.md`](docs/BASELINE.md): current baseline入口
-- [`docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md): 凍結証跡
-- [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md): 関節limit
-- [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md): 実機操作
-- [`docs/HARDWARE_PRETEST_STATUS.md`](docs/HARDWARE_PRETEST_STATUS.md): 現在の試験状態
-- [`docs/Lily_8leg_Robot_Command_Reference.md`](docs/Lily_8leg_Robot_Command_Reference.md): コマンド集
-- [`docs/kinematics_link_length_update_0p075.md`](docs/kinematics_link_length_update_0p075.md): geometry変更記録
+- [`docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md): frozen baseline evidence
+- [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md): joint hard gate
+- [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md): 実機操作正本
+- [`docs/HARDWARE_PRETEST_STATUS.md`](docs/HARDWARE_PRETEST_STATUS.md): latest verification status
+- [`docs/Lily_8leg_Robot_Command_Reference.md`](docs/Lily_8leg_Robot_Command_Reference.md): command集
+- [`docs/kinematics_link_length_update_0p075.md`](docs/kinematics_link_length_update_0p075.md): geometry判断記録
 - [`README_V3_CORE.md`](README_V3_CORE.md): v3 motion core開発・評価入口
 - [`tools/can_interface/README.md`](tools/can_interface/README.md): CAN StateMachine
 
-`docs/v3_0_*` の開発noteは履歴資料であり、現在の運用仕様を上書きしない。
+`docs/v3_0_*` は開発履歴であり、現行operation仕様を上書きしない。
 
-## 12. 開発ルール
+---
 
-- `master` は統合済み現行基準。
+## 18. 開発・変更管理ルール
+
+- `master` は統合済みcurrent baseline。
 - 実験変更はbranchで分離する。
-- frozen candidateは直接変更しない。
+- frozen candidateをsilent editしない。
 - `/cmdForJetson` より上流のcanonical pathをGazebo/実機で分岐させない。
-- source trajectory、transport rate、MCU interpolationを別概念として管理する。
-- 実機でprofile変更が必要なら、理由と結果を新baselineへ記録する。
+- source trajectory、transport timing、MCU interpolationを別概念として管理する。
+- 実機でprofile変更が必要なら、理由と結果をnew candidate / baselineへ記録する。
+- candidate名が同じままchecksumだけ変わるような運用を避ける。
