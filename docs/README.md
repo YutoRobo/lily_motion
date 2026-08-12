@@ -4,7 +4,7 @@
 
 この文書は `docs/` の**索引と文書責務の正本**である。
 
-初見者は、まず「自分が何をしたいか」から文書を選ぶ。
+まず「何をしたいか」から文書を選ぶ。
 
 ---
 
@@ -13,6 +13,7 @@
 | やりたいこと | 読む文書 |
 |---|---|
 | プロジェクト全体を知る | [`../README.md`](../README.md) |
+| コマンドをそのままコピーして実行する | [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) |
 | 現在のcandidate / baselineを確認する | [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) |
 | 現在どこまで検証済みか確認する | [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) |
 | motion生成・評価programを使う | [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) |
@@ -20,7 +21,7 @@
 | JSONL field / candidate package仕様を確認する | [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md) |
 | Gazebo / 実機のruntimeを理解する | [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) |
 | 実機試験を行う | [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) |
-| exact commandを探す | [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) |
+| commandの意味や選び方を確認する | [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) |
 | hardware joint limitを確認する | [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) |
 
 ---
@@ -66,8 +67,18 @@ VALIDATION_STATUS.md
   ↓
 HARDWARE_OPERATION_PROCEDURE.md
   ↓
-COMMAND_REFERENCE.md
+COPY_PASTE_COMMANDS.md
 ```
+
+commandの意味や別の操作を調べる場合は `COMMAND_REFERENCE.md` を使用する。
+
+### 2.4 コマンドだけ使いたい
+
+```text
+COPY_PASTE_COMMANDS.md
+```
+
+Gazeboと実機CANのコマンドを同じページにまとめている。
 
 ---
 
@@ -86,8 +97,9 @@ COMMAND_REFERENCE.md
 6. [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) — current verification status
 7. [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) — runtime boundary / timing architecture
 8. [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) — 実機操作正本
-9. [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) — exact command lookup
-10. [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) — joint hard gate
+9. [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) — Gazebo / CANのcopy-paste用command
+10. [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) — commandの意味・選択・詳細索引
+11. [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) — joint hard gate
 
 ### Decision / evidence
 
@@ -123,8 +135,11 @@ RUNTIME_ARCHITECTURE.md
 HARDWARE_OPERATION_PROCEDURE.md
   = 実機をどう動かすか
 
+COPY_PASTE_COMMANDS.md
+  = Gazebo / CANのコマンドをそのままコピーする場所
+
 COMMAND_REFERENCE.md
-  = exact commandを引く場所
+  = commandの意味・用途・詳細を調べる場所
 ```
 
 同じ情報を複数文書で正本化しない。
@@ -149,6 +164,8 @@ motion系programは、単なるfile一覧ではなく:
 標準toolの使い方は [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) に集約する。
 
 JSONL生成のcommand例は [`JSONL_CREATION_GUIDE.md`](JSONL_CREATION_GUIDE.md) に集約する。
+
+実行だけが目的の場合は [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) を使用する。
 
 個々のhistorical `v3_0_*` noteをcurrent user guideとして使わない。
 
@@ -210,4 +227,3 @@ current authoritative documentの役割を変更する場合:
 2. 同じ事実を別文書へ重複コピーしない。
 3. immutable evidence documentは書き換えない。
 4. 旧pathを消す場合はhistorical linkへの影響を確認する。
-
