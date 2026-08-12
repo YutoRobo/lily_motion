@@ -213,12 +213,7 @@ lily_motion/
 
 ### Currentとhistoricalの境界
 
-現行実機operationのentry pointとして使わないもの:
-
-```text
-archive/
-external/can_interface/   # 存在する履歴構成を現行CANとして扱わない
-```
+現行実機operationのentry pointとして `archive/` を使用しない。
 
 `docs/v3_0_*` は開発判断の履歴であり、current runtimeやcurrent baselineを上書きしない。
 
