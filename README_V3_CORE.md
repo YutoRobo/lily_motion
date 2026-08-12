@@ -10,6 +10,7 @@
 
 - [`README.md`](README.md)
 - [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md)
+- [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md)
 - [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md)
 
 ## Current geometry
@@ -41,6 +42,8 @@ hardware full roll:            NOT TESTED
 ```
 
 開発中に生成したJSONLが自動的に実機承認されることはない。実機はreview済みの `data/reference_candidates/` 配下を使用する。
+
+candidate directory、`commands.jsonl`、`manifest.json`、`summary.json`、`staged/*.jsonl` の意味は [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) を参照する。
 
 ## Core responsibilities
 
@@ -105,6 +108,20 @@ python tools/command_generation/run_v3_0_resample_commands.py --help
 ```
 
 生成・変換したcommand logは、diagnosticsとGazebo reviewを通してからfreezeする。
+
+データのライフサイクル:
+
+```text
+motion algorithm / parameters
+→ generated command JSONL
+→ testdata/ で評価
+→ review
+→ data/reference_candidates/ へfreeze
+→ staged JSONL
+→ canonical runtime transport
+```
+
+JSONLの1 record、source recordとtransport record、checksumの扱いは [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) に定義する。
 
 ## Gazebo: two different purposes
 
