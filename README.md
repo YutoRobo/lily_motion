@@ -5,7 +5,7 @@
 
 Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリでは脚を使って本体を次の面へ倒しながら進む**回転移動**を中心に扱う。
 
-このREADMEは**プロジェクト全体の入口**である。実機操作、正確なbaseline値、コマンド一覧、データ仕様はそれぞれ専用文書を正本とし、このREADMEには重複して持たせない。
+このREADMEは**プロジェクト全体の入口**である。実機操作、正確なbaseline値、motion開発、JSONL作成、コマンド一覧、データ仕様はそれぞれ専用文書を正本とし、このREADMEには重複して持たせない。
 
 実機を動かす場合は、必ず [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を正本として使用する。
 
@@ -17,13 +17,14 @@ Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリ�
 |---|---|
 | プロジェクト全体を知りたい | この `README.md` |
 | 文書の役割・読む順番を知りたい | [`docs/README.md`](docs/README.md) |
-| 現在のcandidate / 検証状態を知りたい | [`docs/BASELINE.md`](docs/BASELINE.md) |
-| 現在どこまで実機前確認が済んだか | [`docs/HARDWARE_PRETEST_STATUS.md`](docs/HARDWARE_PRETEST_STATUS.md) |
+| 現在のcandidate / baselineを知りたい | [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) |
+| 現在どこまで検証済みか | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
+| motion生成・評価programを使いたい | [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md) |
+| JSONLを新しく作りたい | [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) |
 | 実機を動かしたい | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
-| 実行コマンドを探したい | [`docs/Lily_8leg_Robot_Command_Reference.md`](docs/Lily_8leg_Robot_Command_Reference.md) |
+| 実行コマンドを探したい | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
 | Gazebo / 実機のruntimeを理解したい | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
-| JSONL / candidate dataを理解したい | [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) |
-| motion生成・評価コードを開発したい | [`README_V3_CORE.md`](README_V3_CORE.md) |
+| JSONL field / candidate data仕様を知りたい | [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) |
 | 関節可動域を確認したい | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
 
 文書全体の地図は [`docs/README.md`](docs/README.md) に集約する。
@@ -80,6 +81,8 @@ canonical transport
 real hardware / Gazebo MCU-equivalent
 ```
 
+motion側の標準作業は [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md)、JSONL作成例は [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) を使用する。
+
 重要な区別は次の3つである。
 
 ```text
@@ -100,7 +103,7 @@ current candidateの入口:
 data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
 ```
 
-current candidateの**正確なstatus、SHA256、frame数、transport条件**は [`docs/BASELINE.md`](docs/BASELINE.md) を正本とする。
+current candidateの**正確なstatus、SHA256、frame数、transport条件**は [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) を正本とする。
 
 candidate固有の説明は:
 
@@ -183,9 +186,9 @@ risk-oriented split roll
 semantic quarter / full sequence
 ```
 
-正確な順序、STOP条件、安全確認、実行コマンドは [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を使用する。
+正確な順序、STOP条件、安全確認は [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を使用する。
 
-コマンドを探すだけの場合は [`docs/Lily_8leg_Robot_Command_Reference.md`](docs/Lily_8leg_Robot_Command_Reference.md) を使用する。
+コマンドを探すだけの場合は [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) を使用する。
 
 ---
 
@@ -194,7 +197,6 @@ semantic quarter / full sequence
 ```text
 lily_motion/
 ├── README.md                    # project entry point
-├── README_V3_CORE.md            # motion-development entry point
 ├── lily_motion_v3/              # motion / geometry / shared runtime core
 ├── tools/
 │   ├── command_generation/      # command generation / derived stage tools
@@ -211,10 +213,6 @@ lily_motion/
 └── archive/                     # legacy scripts / stale operational docs
 ```
 
-### Currentとhistoricalの境界
-
-現行実機operationのentry pointとして `archive/` を使用しない。
-
 `docs/v3_0_*` は開発判断の履歴であり、current runtimeやcurrent baselineを上書きしない。
 
 ---
@@ -225,17 +223,20 @@ lily_motion/
 
 | 情報 | 正本 |
 |---|---|
-| current candidate / current verification | `docs/BASELINE.md` |
-| pre-hardware test status | `docs/HARDWARE_PRETEST_STATUS.md` |
+| current candidate / current baseline | `docs/CURRENT_BASELINE.md` |
+| current verification status | `docs/VALIDATION_STATUS.md` |
+| motion開発programの使い方 | `docs/MOTION_DEVELOPMENT_GUIDE.md` |
+| JSONLの作成手順 | `docs/JSONL_CREATION_GUIDE.md` |
 | 実機試験順序 / safety | `docs/HARDWARE_OPERATION_PROCEDURE.md` |
-| exact commands | `docs/Lily_8leg_Robot_Command_Reference.md` |
+| exact commands | `docs/COMMAND_REFERENCE.md` |
 | runtime architecture | `docs/RUNTIME_ARCHITECTURE.md` |
 | JSON / JSONL / candidate data contract | `docs/COMMAND_DATA_FORMAT.md` |
 | hardware joint limits | `docs/HARDWARE_LIMITS.md` |
-| motion-development entry | `README_V3_CORE.md` |
 | immutable historical baseline evidence | `docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md` |
 
 README類はこれらを**案内する**役割とし、変わりやすいSHA、frame数、試験結果を必要以上に複製しない。
+
+旧文書名は過去リンク互換のためstubとして残す場合があるが、current正本として使用しない。
 
 ---
 
@@ -258,40 +259,28 @@ README類はこれらを**案内する**役割とし、変わりやすいSHA、f
 
 ## 10. 次に読む
 
-初見者はまず:
+motion developer:
 
 ```text
 README.md
   ↓
-docs/README.md
+docs/MOTION_DEVELOPMENT_GUIDE.md
   ↓
-目的別の正本文書
+docs/JSONL_CREATION_GUIDE.md
+  ↓
+docs/COMMAND_DATA_FORMAT.md
 ```
 
-と進む。
-
-開発者は:
+実機operator:
 
 ```text
 README.md
   ↓
-README_V3_CORE.md
+docs/CURRENT_BASELINE.md
   ↓
-RUNTIME_ARCHITECTURE.md / COMMAND_DATA_FORMAT.md
+docs/VALIDATION_STATUS.md
+  ↓
+docs/HARDWARE_OPERATION_PROCEDURE.md
+  ↓
+docs/COMMAND_REFERENCE.md
 ```
-
-実機operatorは:
-
-```text
-README.md
-  ↓
-BASELINE.md
-  ↓
-HARDWARE_PRETEST_STATUS.md
-  ↓
-HARDWARE_OPERATION_PROCEDURE.md
-  ↓
-Lily_8leg_Robot_Command_Reference.md
-```
-
-を基本とする。
