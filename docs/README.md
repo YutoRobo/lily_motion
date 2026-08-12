@@ -4,246 +4,210 @@
 
 この文書は `docs/` の**索引と文書責務の正本**である。
 
-目的は、同じstatus・数値・手順を複数文書に重複させず、**どの情報をどの文書で確認すべきか**を明確にすることである。
+初見者は、まず「自分が何をしたいか」から文書を選ぶ。
 
 ---
 
-## 1. 初見者の基本ルート
+## 1. 目的別の入口
 
-### プロジェクト全体を理解する
+| やりたいこと | 読む文書 |
+|---|---|
+| プロジェクト全体を知る | [`../README.md`](../README.md) |
+| 現在のcandidate / baselineを確認する | [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) |
+| 現在どこまで検証済みか確認する | [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) |
+| motion生成・評価programを使う | [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) |
+| JSONLを新しく作る | [`JSONL_CREATION_GUIDE.md`](JSONL_CREATION_GUIDE.md) |
+| JSONL field / candidate package仕様を確認する | [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md) |
+| Gazebo / 実機のruntimeを理解する | [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) |
+| 実機試験を行う | [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) |
+| exact commandを探す | [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) |
+| hardware joint limitを確認する | [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) |
+
+---
+
+## 2. 推奨読書順
+
+### 2.1 Motion developer
 
 ```text
 ../README.md
   ↓
-README.md  ← この文書
+MOTION_DEVELOPMENT_GUIDE.md
   ↓
-RUNTIME_ARCHITECTURE.md
+JSONL_CREATION_GUIDE.md
   ↓
 COMMAND_DATA_FORMAT.md
-```
-
-### motion生成・評価を開発する
-
-```text
-../README.md
-  ↓
-../README_V3_CORE.md
   ↓
 RUNTIME_ARCHITECTURE.md
-  ↓
-COMMAND_DATA_FORMAT.md
 ```
 
-### current candidateを理解する
+### 2.2 Current candidateを理解したい
 
 ```text
 ../README.md
   ↓
-BASELINE.md
+CURRENT_BASELINE.md
   ↓
 ../data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/README.md
   ↓
-manifest.json / summary.json / quarter_stage_manifest.json
+manifest.json / summary.json
+  ↓
+reports/
 ```
 
-### 実機試験を行う
+### 2.3 実機operator
 
 ```text
 ../README.md
   ↓
-BASELINE.md
+CURRENT_BASELINE.md
   ↓
-HARDWARE_PRETEST_STATUS.md
+VALIDATION_STATUS.md
   ↓
 HARDWARE_OPERATION_PROCEDURE.md
   ↓
-Lily_8leg_Robot_Command_Reference.md
+COMMAND_REFERENCE.md
 ```
 
 ---
 
-## 2. Authoritative documents
+## 3. Current authoritative documents
 
-### A. Project / document entry
+### Project / motion development
 
-| 文書 | 責務 |
-|---|---|
-| [`../README.md`](../README.md) | project全体の入口。Lily、回転、runtime、repo構成を短く案内する |
-| [`README.md`](README.md) | docs全体の地図、読む順番、正本ルール |
-| [`../README_V3_CORE.md`](../README_V3_CORE.md) | motion生成・評価の開発入口 |
+1. [`../README.md`](../README.md) — project全体入口
+2. [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) — motion programをどう使うか
+3. [`JSONL_CREATION_GUIDE.md`](JSONL_CREATION_GUIDE.md) — JSONL作成の具体例
+4. [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md) — JSON / JSONL / candidate data contract
 
-### B. Current status / baseline
+### Current state / execution
 
-| 文書 | 責務 |
-|---|---|
-| [`BASELINE.md`](BASELINE.md) | **current candidate / current validation条件の正本** |
-| [`HARDWARE_PRETEST_STATUS.md`](HARDWARE_PRETEST_STATUS.md) | **今どこまで実機前確認済みかの正本** |
-| [`BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md) | 2026-08-12 pre-hardware freezeのimmutable evidence |
+5. [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) — current candidate / baseline正本
+6. [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) — current verification status
+7. [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) — runtime boundary / timing architecture
+8. [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) — 実機操作正本
+9. [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) — exact command lookup
+10. [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) — joint hard gate
 
-`BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md` は履歴証跡であり、後続のcurrent statusを追記する文書ではない。
+### Decision / evidence
 
-### C. Operation
-
-| 文書 | 責務 |
-|---|---|
-| [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) | **実機試験順序、安全条件、PASS/FAIL、STOP条件の正本** |
-| [`Lily_8leg_Robot_Command_Reference.md`](Lily_8leg_Robot_Command_Reference.md) | **exact command lookupの正本** |
-
-操作手順とcommand集を分ける。
-
-- 「次に何をするか」→ `HARDWARE_OPERATION_PROCEDURE.md`
-- 「そのcommandは何か」→ `Lily_8leg_Robot_Command_Reference.md`
-
-### D. Architecture / data contract
-
-| 文書 | 責務 |
-|---|---|
-| [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) | `/cmdForJetson`、Gazebo/real共通path、timing layer、consumer boundary |
-| [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md) | JSON / JSONL、24軸record、candidate package、source-vs-transport data contract |
-| [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) | hardware joint limit / hard gate |
-
-### E. Design evidence
-
-| 文書 | 責務 |
-|---|---|
-| [`kinematics_link_length_update_0p075.md`](kinematics_link_length_update_0p075.md) | coxa 0.075 m採用に関するgeometry判断記録 |
-
-設計判断記録はcurrent仕様の入口にはしない。current値は正本文書から参照し、判断過程を調べるときだけ読む。
+- [`BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md) — immutable pre-hardware evidence
+- [`kinematics_link_length_update_0p075.md`](kinematics_link_length_update_0p075.md) — geometry変更判断記録
 
 ---
 
-## 3. 情報のownership rule
-
-変化しやすい情報を複数文書にコピーしない。
-
-| 情報 | 正本 |
-|---|---|
-| current candidate path | `BASELINE.md` |
-| candidate SHA / frame count | `BASELINE.md` + candidate manifest |
-| Gazebo / hardware verification status | `BASELINE.md`, `HARDWARE_PRETEST_STATUS.md` |
-| hardware trial progression | `HARDWARE_OPERATION_PROCEDURE.md` |
-| exact shell command | `Lily_8leg_Robot_Command_Reference.md` |
-| transport profile / architecture | `RUNTIME_ARCHITECTURE.md` |
-| JSONL field semantics | `COMMAND_DATA_FORMAT.md` |
-| joint hard limit | `HARDWARE_LIMITS.md` |
-| motion core responsibilities | `../README_V3_CORE.md` |
-
-他文書でこれらに触れる場合は、**要約＋正本へのlink**を基本とする。
-
----
-
-## 4. Current / historicalの境界
-
-### Current authoritative
-
-現行operationでは、原則として次の文書だけで判断できる状態を維持する。
+## 4. 文書の役割分担
 
 ```text
-../README.md
-docs/README.md
-BASELINE.md
-HARDWARE_PRETEST_STATUS.md
-HARDWARE_OPERATION_PROCEDURE.md
-Lily_8leg_Robot_Command_Reference.md
-RUNTIME_ARCHITECTURE.md
+README.md
+  = project全体入口
+
+MOTION_DEVELOPMENT_GUIDE.md
+  = motion生成・評価・export toolの標準作業フロー
+
+JSONL_CREATION_GUIDE.md
+  = JSONLを実際に作る具体例 / current frozen JSONLの来歴
+
 COMMAND_DATA_FORMAT.md
-HARDWARE_LIMITS.md
-../README_V3_CORE.md
-```
+  = JSON / JSONL / candidate packageのデータ仕様
 
-### Historical development notes
+CURRENT_BASELINE.md
+  = current candidate / SHA / transport / frozen stageの正本
 
-`docs/v3_0_*` は開発過程の検討履歴である。
+VALIDATION_STATUS.md
+  = 現在どこまで確認済みか
 
-そこに記載された以下は、current仕様を上書きしない。
-
-- old current/provisional baseline
-- old candidate path
-- old geometry
-- old link length
-- old smoothing / resampling setting
-- old Gazebo replay rate
-- old joint-limit assumption
-- old script name
-
-履歴noteを読む場合は、そのnoteのversion時点の前提として解釈する。
-
-### Archived operational documents
-
-`archive/docs_legacy/` はstaleなoperation文書・experiment logの保管場所である。
-
-`archive/` は**現行実機操作のentry pointではない**。
-
----
-
-## 5. 文書更新ルール
-
-### Current candidateが変わったとき
-
-最低限更新する:
-
-```text
-BASELINE.md
-HARDWARE_PRETEST_STATUS.md
-candidate README / manifest / summary
-```
-
-必要に応じてoperation procedure / command referenceも更新する。
-
-### Runtime interfaceが変わったとき
-
-最低限更新する:
-
-```text
 RUNTIME_ARCHITECTURE.md
-COMMAND_DATA_FORMAT.md   # data contract変更がある場合
+  = source JSONLからreal/Gazeboまでのprogram boundary
+
 HARDWARE_OPERATION_PROCEDURE.md
-Lily_8leg_Robot_Command_Reference.md
+  = 実機をどう動かすか
+
+COMMAND_REFERENCE.md
+  = exact commandを引く場所
 ```
 
-### Hardware limitが変わったとき
-
-正本:
-
-```text
-HARDWARE_LIMITS.md
-```
-
-他文書へ数値をコピーするのではなく、原則linkで追従する。
-
-### Historical evidence
-
-freeze済みbaseline evidenceは後からcurrent情報へ書き換えない。
-
-新しいfreezeが必要なら新規recordを作成する。
+同じ情報を複数文書で正本化しない。
 
 ---
 
-## 6. 文書を増やす判断基準
+## 5. Motion tool documentation policy
 
-新しいmarkdownを作る前に、既存正本へ入る内容か確認する。
+motion系programは、単なるfile一覧ではなく:
 
-新規文書が妥当なのは主に:
+```text
+目的
+→ standard tool
+→ input / parameter
+→ output
+→ validation
+→ next step
+```
 
-- immutable baseline / experiment evidenceを固定する
-- 独立した設計判断を残す
-- 既存文書の責務と明確に異なる仕様を定義する
+で説明する。
 
-場合である。
+標準toolの使い方は [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) に集約する。
 
-単なるstatus更新やcommand追加のために新しい文書を増やさない。
+JSONL生成のcommand例は [`JSONL_CREATION_GUIDE.md`](JSONL_CREATION_GUIDE.md) に集約する。
+
+個々のhistorical `v3_0_*` noteをcurrent user guideとして使わない。
 
 ---
 
-## 7. 迷ったとき
+## 6. Historical development notes
+
+`v3_0_*` のnoteは、そのversion時点の検討履歴である。
+
+それらに書かれた:
+
+- current baseline
+- old link length
+- old Gazebo replay rate
+- old smoothing/resampling setting
+- old candidate path
+- old parameter recommendation
+
+は、現行operationを上書きしない。
+
+履歴noteは再現性・設計判断追跡のため残す。
+
+---
+
+## 7. Archive boundary
 
 ```text
-全体像       → ../README.md
-current状態  → BASELINE.md
-実機手順     → HARDWARE_OPERATION_PROCEDURE.md
-command      → Lily_8leg_Robot_Command_Reference.md
-runtime      → RUNTIME_ARCHITECTURE.md
-data          → COMMAND_DATA_FORMAT.md
-motion開発   → ../README_V3_CORE.md
-履歴         → v3_0_* / archive/
+archive/
 ```
+
+は旧runner、旧experiment、stale operational docsの保管場所。
+
+archive内のprogramや文書をcurrent standard entry pointとして使用しない。
+
+current repeated-roll candidateのhistorical再現が必要な場合のみ、source commit / archive / historical noteを明示的に追跡する。
+
+---
+
+## 8. 旧文書名について
+
+2026-08-12に、分かりにくかったcurrent文書名を整理した。
+
+| 旧path | current正本 |
+|---|---|
+| `../README_V3_CORE.md` | `MOTION_DEVELOPMENT_GUIDE.md` |
+| `BASELINE.md` | `CURRENT_BASELINE.md` |
+| `HARDWARE_PRETEST_STATUS.md` | `VALIDATION_STATUS.md` |
+| `Lily_8leg_Robot_Command_Reference.md` | `COMMAND_REFERENCE.md` |
+
+旧pathはhistorical link互換用stubとして残すが、current文書として新規linkしない。
+
+---
+
+## 9. Change-control rule
+
+current authoritative documentの役割を変更する場合:
+
+1. `docs/README.md` の責務表を先に確認する。
+2. 同じ事実を別文書へ重複コピーしない。
+3. immutable evidence documentは書き換えない。
+4. 旧pathを消す場合はhistorical linkへの影響を確認する。
+
