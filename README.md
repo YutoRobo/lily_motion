@@ -11,23 +11,64 @@ Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリ�
 
 ## 1. 最初にどこを読むか
 
+まず、やりたいことを次の大分類から選ぶ。
+
+```text
+A. 実機を動かす
+   └─ CAN接続 / Config確認 / 実機試験 / 実行コマンド
+
+B. 設定値や通信仕様を調べる
+   └─ Jetson引数 / MCU parameter / CAN ID / StateMachine
+
+C. Motionを開発する
+   └─ motion生成 / JSONL作成 / runtime構成
+
+D. 現在の状態を確認する
+   └─ current baseline / validation status / hardware limit
+
+E. 文書全体を探す
+   └─ docs全体の索引
+```
+
+### A. 実機を動かす
+
 | やりたいこと | 最初に読む文書 |
 |---|---|
-| 文書全体の地図を見る | [`docs/README.md`](docs/README.md) |
+| CANを接続する / MCUパラメータを確認・変更する | [`docs/CAN_MCU_CONFIG_GUIDE.md`](docs/CAN_MCU_CONFIG_GUIDE.md) |
+| 実機試験を行う | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
+| コマンドをそのままコピーする | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
+| MCU Config GUIを使う | [`tools/mcu_config/README.md`](tools/mcu_config/README.md) |
+
+### B. 設定値や通信仕様を調べる
+
+| やりたいこと | 最初に読む文書 |
+|---|---|
 | Jetson programの引数を調べる | [`docs/JETSON_ARGUMENT_REFERENCE.md`](docs/JETSON_ARGUMENT_REFERENCE.md) |
 | MCU parameterの意味を調べる | [`docs/MCU_PARAMETER_REFERENCE.md`](docs/MCU_PARAMETER_REFERENCE.md) |
-| CANを接続する / MCUパラメータを変更する | [`docs/CAN_MCU_CONFIG_GUIDE.md`](docs/CAN_MCU_CONFIG_GUIDE.md) |
-| コマンドをそのままコピーする | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
-| 実機試験を行う | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
 | UI command / CAN IDを調べる | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
-| MCU Config GUIを使う | [`tools/mcu_config/README.md`](tools/mcu_config/README.md) |
 | CAN StateMachineを理解する | [`tools/can_interface/README.md`](tools/can_interface/README.md) |
-| current candidate / baselineを見る | [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) |
-| current validation statusを見る | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
+
+### C. Motionを開発する
+
+| やりたいこと | 最初に読む文書 |
+|---|---|
 | motion生成・評価programを使う | [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md) |
 | JSONLを作る | [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) |
 | runtime構成を理解する | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
+
+### D. 現在の状態を確認する
+
+| やりたいこと | 最初に読む文書 |
+|---|---|
+| current candidate / baselineを見る | [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) |
+| current validation statusを見る | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
 | physical joint limitを見る | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
+
+### E. 文書全体を探す
+
+| やりたいこと | 最初に読む文書 |
+|---|---|
+| 文書全体の地図を見る | [`docs/README.md`](docs/README.md) |
 
 ---
 
