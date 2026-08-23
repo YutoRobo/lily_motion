@@ -1,23 +1,40 @@
 # Lily Validation Status
 
-更新日: 2026-08-12  
-対象: staged real-hardware validation直前
+更新日: 2026-08-23  
+対象: 現行 `master`
 
 この文書は、**現在どこまで検証済みか**を示す正本である。
 
+motion runtimeとMCU Configは別系統なので、検証状況を分けて示す。
+
+---
+
 ## 1. Summary
 
-現行softwareは、回転候補から `/cmdForJetson` までを実機/Gazebo共通化し、Gazebo側だけにMCU-equivalent interpolationを置く構成へ整理済みである。
+```text
+Motion / staged roll
+  software / Gazebo validation:          PASS
+  semantic quarter frozen:               YES
+  semantic quarter Gazebo:               PASS
+  full staged real hardware:             NOT TESTED
 
-現在の判定:
+MCU Config / parameter editor
+  Axis 11 READ/WRITE/SAVE:               PASS
+  SW/HW persistence after power cycle:   PASS
+  GUI PC validation:                     PASS
+  Jetson final low-load regression:      NOT YET FINAL
+  24-axis simultaneous Config test:      NOT TESTED
+```
+
+したがって:
 
 ```text
-software ready to START staged hardware validation: YES
-approved to start directly with full roll:           NO
-semantic quarter files frozen:                       YES
-semantic quarter Gazebo validation:                  PASS
-semantic quarter hardware validation:                NOT TESTED
+staged hardware validationを開始してよい: YES
+full rollから開始してよい:             NO
+MCU Configの通常単軸運用:               YES
 ```
+
+---
 
 ## 2. Current candidate
 
@@ -42,29 +59,17 @@ Candidate SHA256:
 e60c9de63287c5c198e78e11c1da89475b2293e6de45950cf09f5f2c170304a5
 ```
 
-## 3. Current software baseline
-
-current baseline正本:
+Current baselineの正本:
 
 - [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md)
 
-pre-hardware software baseline:
-
-```text
-commit:
-3ff47e223c2ba67b3f6bf62de327f71de5226d86
-
-branch:
-baseline/pre-hardware-gazebo-pass-20260812
-```
-
-Immutable record:
+Immutable pre-hardware evidence:
 
 - [`BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md)
 
-後続のsemantic-quarter derived data固定では、このimmutable recordを変更しない。
+---
 
-## 4. Canonical runtime
+## 3. Canonical runtime
 
 ```text
 staged JSONL
@@ -75,11 +80,7 @@ staged JSONL
    └→ GAZEBO: MCU interpolator node → Gazebo
 ```
 
-詳細:
-
-- [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md)
-
-## 5. Current transport comparison profile
+Current transport profile:
 
 ```text
 resample-factor = 2
@@ -93,11 +94,15 @@ interpolation duration = 0.100 s
 update period          = 0.002 s
 ```
 
-このprofileはGazeboで検証済みだが、実MCUとの組合せは今後の実機stageで確認する。
+詳細:
 
-## 6. Software / regression status
+- [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md)
 
-2026-08-12 pre-hardware freeze前に確認:
+---
+
+## 4. Motion software / CAN regression
+
+2026-08-12 pre-hardware freeze前のsoftware evidence:
 
 ```text
 test_publish_cmdforjetson_jsonl_resampling.py    5 PASS
@@ -106,9 +111,7 @@ test_shared_command_stream.py                    3 PASS
 test_gazebo_mcu_interpolator_online.py           6 PASS
 ```
 
-semantic-quarter builderについても、contiguous `roll_index` block、frame count、cumulative-prefix一致、deterministic output、4/4 source一致を確認済み。
-
-既存CAN software evidence:
+CAN software evidence:
 
 ```text
 CAN focused unified-path tests    PASS
@@ -118,13 +121,13 @@ vcan axes10,11,12 fan-out         PASS
 mock end-to-end                   PASS
 ```
 
-これらは実機mechanicsや実CAN bus loadを保証しない。
+これらは実機mechanicsや24軸実CAN bus loadを保証しない。
 
-## 7. Canonical-path Gazebo validation
+---
 
-### 7.1 Existing risk-split stages
+## 5. Gazebo validation
 
-同じpublisher、同じ `/cmdForJetson`、同じtransport profileを使用し、Gazebo MCU nodeを起動した状態でsplit stageを連続実行した。
+Risk-split:
 
 ```text
 HOME → air-entry        PASS
@@ -134,52 +137,26 @@ roll 100–300            PASS
 roll 300–end            PASS
 ```
 
-追加確認:
+Semantic quarter:
 
 ```text
-visible boundary jump         none observed
-final-pose hold               PASS
-MCU node kept alive across stages
+roll_to_1of4    PASS
+roll_to_2of4    PASS
+roll_to_3of4    PASS
+roll_to_4of4    PASS
 ```
 
-### 7.2 Semantic quarter stages
+各quarter fileはrolling-startからの累積prefix。
 
-`commands.jsonl` の連続 `roll_index` blockを境界として、次のcumulative stageを固定した。
+---
 
-```text
-roll_to_1of4_commands.jsonl     560 frames
-roll_to_2of4_commands.jsonl    1120 frames
-roll_to_3of4_commands.jsonl    1680 frames
-roll_to_4of4_commands.jsonl    2233 frames
-```
-
-Data-freeze commit:
-
-```text
-2e42343dccf3b56066cdcc97e011dca328388a20
-```
-
-Gazebo結果:
-
-```text
-1/4    PASS
-2/4    PASS
-3/4    PASS
-4/4    PASS
-```
-
-`roll_to_4of4_commands.jsonl` は元の `commands.jsonl` とbyte-for-byte同一。
-
-各quarter fileはrolling-startからの**累積prefix**であり、quarter同士を順番に継ぎ足して実行するfileではない。
-
-## 8. Hardware status
+## 6. Existing real-hardware motion evidence
 
 既存確認:
 
 ```text
 real axis10
-direction: plus
-amplitude: 0.002 rad
++0.002 rad
 visual result: no obvious abnormality
 status: provisional PASS
 ```
@@ -199,103 +176,111 @@ semantic quarter roll
 full roll
 ```
 
-## 9. Frozen staged inputs
+実機進行順は [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) を正本とする。
+
+---
+
+## 7. MCU Config firmware validation
+
+Axis 11単軸で確認済み:
 
 ```text
-data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/staged/
-
-  # HOME → rolling-start
-  air_entry_and_hold_only_commands.jsonl
-
-  # initial real-hardware risk progression
-  roll_0_50_commands.jsonl
-  roll_50_100_commands.jsonl
-  roll_100_300_commands.jsonl
-  roll_300_end_commands.jsonl
-
-  # independent cumulative semantic selections
-  roll_to_1of4_commands.jsonl
-  roll_to_2of4_commands.jsonl
-  roll_to_3of4_commands.jsonl
-  roll_to_4of4_commands.jsonl
-  quarter_stage_manifest.json
-
-  # final combined validation
-  combined_with_hold_commands.jsonl
+READ                                    PASS
+SoftwareConfig WRITE                    PASS
+SoftwareConfig Echo                     PASS
+same-parameter READ back                PASS
+SoftwareConfig SAVE                     PASS
+SW persistence after power cycle        PASS
+HardwareConfig WRITE                    PASS
+HardwareConfig Echo                     PASS
+HardwareConfig SAVE                     PASS
+HW persistence after power cycle        PASS
+HW/SW independent persistence           PASS
 ```
 
-air-entry source:
+基準復元確認済み:
 
 ```text
-135 source frames
+Kp         = 500
+gear_ratio = 30.8
 ```
 
-factor=2で:
+HardwareConfig SAVE後の再起動要求動作も確認済み。
+
+---
+
+## 8. MCU Config GUI validation
+
+PC環境で確認済み:
 
 ```text
-269 transport frames
+Python 2 GUI起動                        PASS
+can0接続                                PASS
+Axis 11 parameter READ                  PASS
+missing axis + connected axis混在       PASS
+1 parameter WRITE                       PASS
+MCU Echo                                PASS
+same-parameter-only READ back           PASS
+SoftwareConfig SAVE                     PASS
+HardwareConfig SAVE                     PASS
+power cycle後の表示復元                 PASS
 ```
 
-air-entry transport SHA256:
+Kp変更が実際の制御挙動へ反映されることも確認済み。
+
+ただし、極端なKpで発振することはcontrol-safe rangeの問題であり、Config通信正常性とは分けて扱う。
+
+---
+
+## 9. Config remaining checks
 
 ```text
-e1c00e23811f841e86ca4ff3fdc9a42c380e6537f6cf9623f97334a020f5a0fa
+Jetson actual final low-load regression     remaining
+24-axis simultaneous connection             remaining
+Flash corruption injection                  deferred
+SAVE中power-loss                            deferred / operation controlled
+linker script last 4KB reservation          remaining integration hardening
 ```
 
-Semantic quarter SHA256:
+急ぎ実験では、通常値・正常CAN・SAVE中power-off禁止の運用で現行baselineを使用する。
 
-```text
-1/4  cf2f2592b6dd688a996b4bcc872509fa9ee3b85d8db53825ce2a01671a70dc58
-2/4  3e54fdef3c3285b2d45f43b086081ce1dc659e7a87098981a5702561878e0bf0
-3/4  2599ea79a90ae4746a10f6771589e50e0a5acf7d3a1e2e0f8e146b602cad3998
-4/4  e60c9de63287c5c198e78e11c1da89475b2293e6de45950cf09f5f2c170304a5
-```
+---
 
-## 10. Required first hardware progression
+## 10. CAN / Config documentation
 
-初回実機ではsemantic quarterが存在していても、risk-split stageを飛ばさない。
+CAN setup / Config操作:
 
-```text
-single-axis positive/negative small-angle
-→ one-leg individual axes
-→ one-leg coordinated
-→ suspended air-entry
-→ controlled touchdown
-→ roll 0–50
-→ roll 50–100
-→ roll 100–300
-→ roll 300–end
-→ final combined sequence
-```
+- [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md)
 
-risk-split full pathがPASSした後は、必要に応じて次を独立trialとして選べる。
+Config GUI:
 
-```text
-HOME → air-entry → touchdown → roll_to_1of4
-HOME → air-entry → touchdown → roll_to_2of4
-HOME → air-entry → touchdown → roll_to_3of4
-HOME → air-entry → touchdown → roll_to_4of4
-```
+- [`../tools/mcu_config/README.md`](../tools/mcu_config/README.md)
 
-`roll_to_1of4` 実行直後に `roll_to_2of4` を続けて実行しない。
+CAN StateMachine:
+
+- [`../tools/can_interface/README.md`](../tools/can_interface/README.md)
+
+---
 
 ## 11. Main remaining hardware risks
 
 - physical joint sign mapping
 - HOME direction / repeatability
-- actual MCU interpolation behavior
-- CAN timing and multi-axis serialization
+- actual MCU interpolation under full mechanism
+- multi-axis CAN timing / serialization
 - load tracking
 - backlash / compliance
 - current / sound / vibration / temperature
-- floor contact and slip
+- floor contact / slip
 - cable interference
 - Jetson scheduling jitter
 - full mechanism dynamics
 
+---
+
 ## 12. Safety boundary
 
-Software pretestがPASSしても、物理非常停止、fixture、suspended start、段階試験を省略しない。
+Software / Config validationがPASSしても、物理非常停止、fixture、suspended start、段階試験を省略しない。
 
 詳細:
 
