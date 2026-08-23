@@ -3,146 +3,82 @@
 更新日: 2026-08-23  
 対象: `master`
 
-Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリでは脚を使って本体を次の面へ倒しながら進む**回転移動**を中心に扱う。
+Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリではmotion生成、Gazebo検証、実機CAN runtime、MCU Config調整を扱う。
 
-このREADMEは**プロジェクト全体の入口**である。実機操作、正確なbaseline値、motion開発、JSONL作成、コマンド一覧、データ仕様はそれぞれ専用文書を正本とし、このREADMEには重複して持たせない。
-
-実機を動かす場合は、必ず [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を正本として使用する。
+このREADMEはプロジェクト全体の入口であり、詳細は目的別の正本文書へ分ける。
 
 ---
 
 ## 1. 最初にどこを読むか
 
-| 目的 | 最初に読む文書 |
+| やりたいこと | 最初に読む文書 |
 |---|---|
-| プロジェクト全体を知りたい | この `README.md` |
-| 文書の役割・読む順番を知りたい | [`docs/README.md`](docs/README.md) |
-| コマンドをそのままコピーして実行したい | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
-| 現在のcandidate / baselineを知りたい | [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) |
-| 現在どこまで検証済みか | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
-| motion生成・評価programを使いたい | [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md) |
-| JSONLを新しく作りたい | [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) |
-| 実機を動かしたい | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
-| commandの意味や選び方を調べたい | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
-| Gazebo / 実機のruntimeを理解したい | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
-| JSONL field / candidate data仕様を知りたい | [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) |
-| 関節可動域を確認したい | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
-| MCU Configパラメータを確認・変更・保存したい | [`tools/mcu_config/README.md`](tools/mcu_config/README.md) |
-
-文書全体の地図は [`docs/README.md`](docs/README.md) に集約する。
+| 文書全体の地図を見る | [`docs/README.md`](docs/README.md) |
+| CANを接続する / MCUパラメータを変更する | [`docs/CAN_MCU_CONFIG_GUIDE.md`](docs/CAN_MCU_CONFIG_GUIDE.md) |
+| コマンドをそのままコピーする | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
+| 実機試験を行う | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
+| UI command / CAN IDを調べる | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
+| MCU Config GUIを使う | [`tools/mcu_config/README.md`](tools/mcu_config/README.md) |
+| CAN StateMachineを理解する | [`tools/can_interface/README.md`](tools/can_interface/README.md) |
+| current candidate / baselineを見る | [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) |
+| current validation statusを見る | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
+| motion生成・評価programを使う | [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md) |
+| JSONLを作る | [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) |
+| runtime構成を理解する | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
+| physical joint limitを見る | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
 
 ---
 
-## 2. このプロジェクトでいう「回転」
+## 2. 実機で最初に行うCAN設定
 
-通常の歩行だけではなく、脚姿勢と支持状態を切り替えながら本体を次の面へ移す。
+現行のCAN初期設定は次の2コマンド。
 
-```text
-支持姿勢
-  ↓
-支持脚 / 遊脚を切り替える
-  ↓
-次の面へ移る脚姿勢を作る
-  ↓
-本体をrollさせる
-  ↓
-次の支持姿勢
+```bash
+sudo ip link set can0 type can bitrate 500000
+sudo ip link set can0 up
 ```
 
-1回の意味的な回転単位はcommand metadataの `roll_index` で追跡する。
-
-実機へ最終的に送るのはmetadataではなく、24軸の関節指令値である。
-
-```text
-joint_command_rad : 24 values [rad]
-```
-
-詳細は [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) を参照する。
+詳細は [`docs/CAN_MCU_CONFIG_GUIDE.md`](docs/CAN_MCU_CONFIG_GUIDE.md) を正本とする。
 
 ---
 
-## 3. 開発から実行まで
+## 3. MCU Configの位置付け
+
+MCU Config GUI:
 
 ```text
-motion algorithm / parameters
-        ↓
-command generation
-        ↓
-generated candidate
-        ↓
-diagnostics / Gazebo / geometry evaluation
-        ↓
-reference candidate freeze
-        ↓
-staged execution data
-        ↓
-canonical transport
-        ↓
-/cmdForJetson
-        ↓
-real hardware / Gazebo MCU-equivalent
+tools/mcu_config/lily_mcu_config_editor.py
 ```
 
-motion側の標準作業は [`docs/MOTION_DEVELOPMENT_GUIDE.md`](docs/MOTION_DEVELOPMENT_GUIDE.md)、JSONL作成例は [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) を使用する。
+用途:
 
-重要な区別は次の3つである。
+- gear ratio / motor direction確認
+- joint limit設定値確認
+- PID確認・調整
+- position jump / error threshold確認
+- interpolation time確認
+- torque ramp設定確認
+- HardwareConfig / SoftwareConfig SAVE
+
+基本操作:
 
 ```text
-trajectory generation
-transport timing
-MCU-side interpolation
+READ
+→ 必要ならWRITE
+→ Echo / same-parameter READ back
+→ 永続化が必要な場合だけSAVE
 ```
 
-これらを同じ処理として扱わない。
+HardwareConfig SAVE後はMCUを再起動する。
 
 ---
 
-## 4. 現在のreference candidate
-
-current candidateの入口:
+## 4. Runtime architecture
 
 ```text
-data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
-```
-
-current candidateの**正確なstatus、SHA256、frame数、transport条件**は [`docs/CURRENT_BASELINE.md`](docs/CURRENT_BASELINE.md) を正本とする。
-
-candidate固有の説明は:
-
-- [`data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/README.md`](data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/README.md)
-
-を参照する。
-
-現在は従来のrisk-oriented splitに加え、同じsource trajectoryからsemantic quarterを固定している。
-
-```text
-risk-oriented sequential split
-  roll_0_50
-  roll_50_100
-  roll_100_300
-  roll_300_end
-
-semantic cumulative stage
-  roll_to_1of4
-  roll_to_2of4
-  roll_to_3of4
-  roll_to_4of4
-```
-
-semantic quarterは**累積**である。例えば `roll_to_2of4` は第2区間だけではなく、rolling-startから2/4終了までを含む。
-
----
-
-## 5. 現行runtimeの原則
-
-Gazeboと実機は `/cmdForJetson` まで同じ経路を使う。
-
-```text
-frozen / staged JSONL
+motion / staged JSONL
         ↓
 tools/publish_cmdforjetson_jsonl.py
-        ↓
-lily_motion_v3.command_stream
         ↓
 /cmdForJetson
         │
@@ -156,136 +92,85 @@ lily_motion_v3.command_stream
              ↓
            tools/gazebo/mcu_position_interpolator_node.py
              ↓
-           Gazebo joint controllers
+           Gazebo
 ```
 
-原則:
-
-- canonical publisherにGazebo/realのbackend分岐を作らない。
-- Gazebo確認時はCAN StateMachineを同時に動かさない。
-- 実機試験時はGazebo MCU nodeを同時に動かさない。
-- `/cmdForJetson` に意図しない複数consumerを接続しない。
-
-詳細は [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) を参照する。
+実機時にGazebo MCU nodeを同時に `/cmdForJetson` へ接続しない。
 
 ---
 
-## 6. 実機試験の考え方
-
-初回実機試験は、いきなりfull rollを実行しない。
+## 5. 実機試験の基本順序
 
 ```text
-single axis
-  ↓
-one leg
-  ↓
-suspended air-entry
-  ↓
-controlled touchdown
-  ↓
-risk-oriented split roll
-  ↓
-semantic quarter / full sequence
+CAN setup
+→ 必要ならMCU Config READ確認
+→ ROS / StateMachine / UI起動
+→ single axis
+→ one leg
+→ 24-axis mapping/HOME check
+→ suspended air-entry
+→ controlled touchdown
+→ risk-split roll
+→ semantic quarter
+→ final combined
 ```
 
-正確な順序、STOP条件、安全確認は [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を使用する。
-
-コマンドをそのままコピーして実行する場合は [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) を使用する。commandの意味や別の操作を調べる場合は [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) を使用する。
+正確なSTOP条件と進行条件は [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を優先する。
 
 ---
 
-## 7. Repository map
+## 6. Repository map
 
 ```text
 lily_motion/
-├── README.md                    # project entry point
+├── README.md
 ├── lily_motion_v3/              # motion / geometry / shared runtime core
 ├── tools/
-│   ├── command_generation/      # command generation / derived stage tools
-│   ├── diagnostics/             # evaluation / diagnostics
-│   ├── gazebo/                  # Gazebo execution / MCU-equivalent path
-│   ├── can_interface/           # current CAN StateMachine / UI / emulator
-│   ├── mcu_config/              # MCU Config editor / operation README
-│   └── publish_cmdforjetson_*   # canonical and staged-test publishers
+│   ├── can_interface/           # CAN StateMachine / UI / emulator
+│   ├── mcu_config/              # MCU Config GUI
+│   ├── command_generation/      # command generation tools
+│   ├── diagnostics/             # diagnostics / evaluation
+│   ├── gazebo/                  # Gazebo MCU-equivalent path
+│   └── publish_cmdforjetson_*   # hardware/Gazebo shared publishers
 ├── data/
-│   ├── reference_candidates/    # reviewed/frozen candidates
-│   └── baselines/               # retained comparison baselines
-├── docs/                        # current docs + development history notes
-├── tests/                       # regression tests
-├── testdata/                    # exploratory/generated evaluation outputs
-└── archive/                     # legacy scripts / stale operational docs
+│   ├── reference_candidates/
+│   └── baselines/
+├── docs/
+│   ├── README.md                # documentation map
+│   ├── CAN_MCU_CONFIG_GUIDE.md  # CAN / MCU Config正本
+│   ├── COPY_PASTE_COMMANDS.md
+│   ├── HARDWARE_OPERATION_PROCEDURE.md
+│   ├── COMMAND_REFERENCE.md
+│   └── ...
+├── tests/
+├── testdata/
+└── archive/
 ```
 
-`docs/v3_0_*` は開発判断の履歴であり、current runtimeやcurrent baselineを上書きしない。
-
 ---
 
-## 8. 文書の正本ルール
+## 7. 文書の正本ルール
 
-同じ数値やstatusを複数文書で正本化しない。
-
-| 情報 | 正本 |
-|---|---|
-| current candidate / current baseline | `docs/CURRENT_BASELINE.md` |
-| current verification status | `docs/VALIDATION_STATUS.md` |
-| motion開発programの使い方 | `docs/MOTION_DEVELOPMENT_GUIDE.md` |
-| JSONLの作成手順 | `docs/JSONL_CREATION_GUIDE.md` |
-| 実機試験順序 / safety | `docs/HARDWARE_OPERATION_PROCEDURE.md` |
-| copy-paste用commands | `docs/COPY_PASTE_COMMANDS.md` |
-| commandの意味 / 詳細索引 | `docs/COMMAND_REFERENCE.md` |
-| runtime architecture | `docs/RUNTIME_ARCHITECTURE.md` |
-| JSON / JSONL / candidate data contract | `docs/COMMAND_DATA_FORMAT.md` |
-| hardware joint limits | `docs/HARDWARE_LIMITS.md` |
-| MCU Config editorの使い方 / CAN setup | `tools/mcu_config/README.md` |
-| immutable historical baseline evidence | `docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md` |
-
-README類はこれらを**案内する**役割とし、変わりやすいSHA、frame数、試験結果を必要以上に複製しない。
-
-旧文書名は過去リンク互換のためstubとして残す場合があるが、current正本として使用しない。
-
----
-
-## 9. Change control
-
-次をsilent変更しない。
-
-- frozen candidate JSONL
-- staged JSONL
-- semantic quarter JSONL / manifest
-- transport resample factor / rate
-- `/cmdForJetson` semantics
-- CAN StateMachine mapping
-- Gazebo MCU interpolation assumptions
-- hardware joint limit definition
-
-変更が必要なら、新しいcandidate / baseline / validation recordとして明示的に残す。
-
----
-
-## 10. 次に読む
-
-motion developer:
+同じ事実を複数文書で正本化しない。
 
 ```text
-README.md
-  ↓
-docs/MOTION_DEVELOPMENT_GUIDE.md
-  ↓
-docs/JSONL_CREATION_GUIDE.md
-  ↓
-docs/COMMAND_DATA_FORMAT.md
+CAN setup / Config操作
+→ docs/CAN_MCU_CONFIG_GUIDE.md
+
+実行コマンド
+→ docs/COPY_PASTE_COMMANDS.md
+
+安全な実機順序
+→ docs/HARDWARE_OPERATION_PROCEDURE.md
+
+command / CAN IDの意味
+→ docs/COMMAND_REFERENCE.md
+
+current baseline
+→ docs/CURRENT_BASELINE.md
+
+current validation
+→ docs/VALIDATION_STATUS.md
 ```
 
-実機operator:
-
-```text
-README.md
-  ↓
-docs/CURRENT_BASELINE.md
-  ↓
-docs/VALIDATION_STATUS.md
-  ↓
-docs/HARDWARE_OPERATION_PROCEDURE.md
-  ↓
-docs/COPY_PASTE_COMMANDS.md
-```
+historical `v3_0_*` noteや `archive/` はcurrent operationを上書きしない。
