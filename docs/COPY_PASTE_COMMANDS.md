@@ -12,10 +12,21 @@
 
 ---
 
-# 0. Repository確認
+# 0. Repository root
+
+以下の `tools/...`、`docs/...`、`data/...` はすべて **`lily_motion/` のrepository root基準**。
+
+個人PC固有の絶対パスは使用しない。
+
+repository内のsubdirectoryにいる場合:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
+cd "$(git rev-parse --show-toplevel)"
+```
+
+repository rootで確認:
+
+```bash
 git status -sb
 git log -1 --oneline
 ```
@@ -49,16 +60,16 @@ candump -L can0
 
 ## 2.1 Axis 11だけ
 
+repository rootから:
+
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion/tools/mcu_config
-python2 lily_mcu_config_editor.py --interface can0 --axes 11
+python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 11
 ```
 
 ## 2.2 24軸を一覧対象にする
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion/tools/mcu_config
-python2 lily_mcu_config_editor.py --interface can0 --axes 0-23
+python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 0-23
 ```
 
 通常はGUIを使用する。raw `cansend` は診断用。
@@ -115,10 +126,9 @@ roscore
 
 ## 3.2 Terminal 2: CAN StateMachine
 
-CANをSection 1でUPした後に実行する。
+CANをSection 1でUPした後、repository rootから実行する。
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 
@@ -130,8 +140,9 @@ python2 tools/can_interface/statemachine/main.py \
 
 ## 3.3 Terminal 3: UI
 
+repository rootから:
+
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 python2 tools/can_interface/initUI/ui.py
@@ -210,10 +221,11 @@ rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:10:0'"
 
 # 5. 単軸試験
 
+repository rootから実行する。
+
 Axis 10 +0.002 rad:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 
@@ -290,8 +302,9 @@ python2 tools/publish_cmdforjetson_one_leg_test.py \
 
 # 7. Current staged roll
 
+repository rootから:
+
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 
@@ -403,10 +416,9 @@ source ~/catkin_ws/devel/setup.bash
 roscore
 ```
 
-Terminal 2:
+Terminal 2はrepository rootから:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 
