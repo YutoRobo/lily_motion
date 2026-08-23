@@ -13,6 +13,8 @@
 | やりたいこと | 正本 / 最初に読む文書 |
 |---|---|
 | プロジェクト全体を知る | [`../README.md`](../README.md) |
+| Jetson programの各引数を調べる | [`JETSON_ARGUMENT_REFERENCE.md`](JETSON_ARGUMENT_REFERENCE.md) |
+| MCU Config parameterの意味を調べる | [`MCU_PARAMETER_REFERENCE.md`](MCU_PARAMETER_REFERENCE.md) |
 | CANを接続する / MCU Configを変更する | [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) |
 | コマンドをそのままコピーして実行する | [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) |
 | 実機試験を行う | [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) |
@@ -34,6 +36,10 @@
 ```text
 ../README.md
   ↓
+JETSON_ARGUMENT_REFERENCE.md
+  ↓
+MCU_PARAMETER_REFERENCE.md
+  ↓
 CAN_MCU_CONFIG_GUIDE.md
   ↓
 CURRENT_BASELINE.md
@@ -45,9 +51,11 @@ HARDWARE_OPERATION_PROCEDURE.md
 COPY_PASTE_COMMANDS.md
 ```
 
-意味を確認したいときだけ `COMMAND_REFERENCE.md` を見る。
+普段は全部を毎回読む必要はない。
 
-MCUパラメータを触る場合は `tools/mcu_config/README.md` も読む。
+- 引数を忘れた → `JETSON_ARGUMENT_REFERENCE.md`
+- MCU parameterを忘れた → `MCU_PARAMETER_REFERENCE.md`
+- 実際に操作する → `CAN_MCU_CONFIG_GUIDE.md` / `COPY_PASTE_COMMANDS.md`
 
 ---
 
@@ -72,6 +80,12 @@ RUNTIME_ARCHITECTURE.md
 ```text
 ../README.md
   = project全体入口
+
+JETSON_ARGUMENT_REFERENCE.md
+  = Jetson / host programのCLI引数、transport timing、resample_factorの正本
+
+MCU_PARAMETER_REFERENCE.md
+  = HardwareConfig / SoftwareConfig parameterの意味・default・反映箇所の正本
 
 CAN_MCU_CONFIG_GUIDE.md
   = CAN接続、CAN command体系、MCU Config READ/WRITE/SAVEの正本
@@ -115,7 +129,45 @@ HARDWARE_LIMITS.md
 
 ---
 
-## 5. CAN関連の正本ルール
+## 5. Jetson / MCU parameterの切り分け
+
+```text
+Jetson側
+  --resample-factor
+  --rate
+  --command-log
+  --axis
+  --leg-index
+  --can-channel
+  ...
+→ JETSON_ARGUMENT_REFERENCE.md
+
+MCU側
+  gear_ratio
+  motor_direction
+  Kp / Ki / Kd
+  position_jump_limit_rad
+  position_error_limit_rad
+  interpolation_time_ms
+  torque ramp
+  ...
+→ MCU_PARAMETER_REFERENCE.md
+```
+
+特に:
+
+```text
+--resample-factor
+≠ interpolation_time_ms
+```
+
+である。
+
+前者はJetson側transport target生成、後者はMCU内部target interpolation。
+
+---
+
+## 6. CAN関連の正本ルール
 
 CANについては次のように分ける。
 
@@ -125,6 +177,12 @@ CANをUPするコマンド
 
 runtimeを起動するコマンド
 → COPY_PASTE_COMMANDS.md
+
+Jetson側引数
+→ JETSON_ARGUMENT_REFERENCE.md
+
+MCU parameterの意味
+→ MCU_PARAMETER_REFERENCE.md
 
 UI command / CAN IDの意味
 → COMMAND_REFERENCE.md
@@ -146,7 +204,7 @@ sudo ip link set can0 up
 
 ---
 
-## 6. MCU Config文書ルール
+## 7. MCU Config文書ルール
 
 通常のパラメータ変更はGUIを使用する。
 
@@ -169,7 +227,7 @@ raw `cansend` は診断・protocol確認用とし、通常の調整操作の第�
 
 ---
 
-## 7. Historical documents
+## 8. Historical documents
 
 次はcurrent正本ではなく、履歴・互換用。
 
@@ -184,13 +242,15 @@ raw `cansend` は診断・protocol確認用とし、通常の調整操作の第�
 
 ---
 
-## 8. Change control
+## 9. Change control
 
 current authoritative documentを変更する場合:
 
 1. この `docs/README.md` の責務を確認する。
 2. 同じ情報を複数箇所へコピーして正本化しない。
-3. 実行コマンドを変えたら `COPY_PASTE_COMMANDS.md` を更新する。
-4. CAN protocol / Config手順を変えたら `CAN_MCU_CONFIG_GUIDE.md` を更新する。
-5. 実機の試験順序を変えたら `HARDWARE_OPERATION_PROCEDURE.md` を更新する。
-6. immutable evidence documentは書き換えない。
+3. Jetson program引数を変えたら `JETSON_ARGUMENT_REFERENCE.md` を更新する。
+4. MCU Config parameterの意味・default・適用先を変えたら `MCU_PARAMETER_REFERENCE.md` を更新する。
+5. 実行コマンドを変えたら `COPY_PASTE_COMMANDS.md` を更新する。
+6. CAN protocol / Config手順を変えたら `CAN_MCU_CONFIG_GUIDE.md` を更新する。
+7. 実機の試験順序を変えたら `HARDWARE_OPERATION_PROCEDURE.md` を更新する。
+8. immutable evidence documentは書き換えない。
