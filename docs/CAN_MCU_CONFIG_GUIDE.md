@@ -15,6 +15,22 @@
 
 ---
 
+## 0. Path convention
+
+このリポジトリのcurrent文書では、**個人PC固有の絶対パスを使用しない**。
+
+`tools/...`、`docs/...`、`data/...` はすべて `lily_motion/` のrepository root基準で記載する。
+
+実行前に各PCでclone済みの `lily_motion/` repository rootへ移動する。repository内の任意のsubdirectoryにいる場合は、次でrootへ戻せる。
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+```
+
+repository外にいる場合は、各自のclone先へ移動してから実行する。
+
+---
+
 ## 1. CAN接続の正本
 
 Jetson / Linuxで実機CANを使用するときは、`can0` を次の2コマンドで設定する。
@@ -44,8 +60,6 @@ Config GUIでは内部的に `candump` / `cansend` を使用するため、`can-
 
 ## 2. CAN操作は3層に分ける
 
-混同を避けるため、CAN関連の操作を次の3層に分ける。
-
 ```text
 A. Linux SocketCAN設定
    sudo ip link ...
@@ -68,10 +82,9 @@ MCUのPID、減速比、制限値などを確認・変更するときだけCを�
 
 ## 3. Runtime CANの起動
 
-CAN初期設定後、StateMachineを起動する。
+以下はrepository rootから実行する。
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 
@@ -117,18 +130,18 @@ Byte 4-7 : little-endian float32 [rad]
 
 ## 5. MCU Config GUIの起動
 
+repository rootから実行する。
+
 Axis 11だけ確認する場合:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion/tools/mcu_config
-python2 lily_mcu_config_editor.py --interface can0 --axes 11
+python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 11
 ```
 
 24軸を一覧対象にする場合:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion/tools/mcu_config
-python2 lily_mcu_config_editor.py --interface can0 --axes 0-23
+python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 0-23
 ```
 
 GUIは自動周期READを行わない。更新ボタンを押したときだけREADし、WRITE後は変更した1パラメータだけREAD backする。
@@ -145,8 +158,6 @@ READはMCU仕様上、全stateで使用可能である。
 
 ### 6.2 SoftwareConfig変更
 
-手順:
-
 ```text
 aliment_standby
 → GUIで対象axis / parameterを選択
@@ -160,8 +171,6 @@ aliment_standby
 SoftwareConfigのWRITEはRAMへ即時反映される。SAVEしなければ、電源再投入後は保存済み値へ戻る。
 
 ### 6.3 HardwareConfig変更
-
-手順:
 
 ```text
 aliment_standby
@@ -322,7 +331,7 @@ cansend can0 08B#0301000000000000
 
 ```text
 1. CANを500 kbit/sでUP
-2. Config GUI起動
+2. repository rootからConfig GUI起動
 3. 対象axisをREAD
 4. 意図した保存値であることを確認
 5. GUIを閉じる、またはREAD用途のままにする
