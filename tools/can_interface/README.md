@@ -1,13 +1,45 @@
 # Lily CAN Interface
 
-更新日: 2026-08-12
+更新日: 2026-08-23
 
-`tools/can_interface/` は現行Lily hardware CAN UI / StateMachineの唯一のmaintained execution targetである。`external/can_interface/` は旧snapshotであり、現行操作には使わない。
+`tools/can_interface/` は現行Lily hardware CAN UI / StateMachineのmaintained execution targetである。
 
-## Entry points
+CAN接続とMCU Config操作の正本は [`../../docs/CAN_MCU_CONFIG_GUIDE.md`](../../docs/CAN_MCU_CONFIG_GUIDE.md) を参照する。
+
+---
+
+## 1. CAN setup
+
+実機CANは次の2コマンドで設定する。
 
 ```bash
-python2 tools/can_interface/statemachine/main.py
+sudo ip link set can0 type can bitrate 500000
+sudo ip link set can0 up
+```
+
+確認:
+
+```bash
+ip -details link show can0
+candump -L can0
+```
+
+---
+
+## 2. Entry points
+
+StateMachine:
+
+```bash
+python2 tools/can_interface/statemachine/main.py \
+  --can-interface socketcan \
+  --can-channel can0 \
+  --can-bitrate 500000
+```
+
+UI:
+
+```bash
 python2 tools/can_interface/initUI/ui.py
 ```
 
@@ -20,7 +52,9 @@ python2 tools/publish_cmdforjetson_mapped_axis_replay.py --help
 python2 tools/publish_cmdforjetson_jsonl.py --help
 ```
 
-## Production position input
+---
+
+## 3. Production position input
 
 ```text
 Topic: /cmdForJetson
@@ -46,16 +80,9 @@ StateMachine owns:
 → 0x400 + axis
 ```
 
-## Shared upstream architecture
+---
 
-`/cmdForJetson` より上流はhardware/Gazebo共通。
-
-```text
-staged/frozen JSONL
-→ tools/publish_cmdforjetson_jsonl.py
-→ shared normalization/resampling
-→ /cmdForJetson
-```
+## 4. Hardware / Gazebo boundary
 
 Hardware:
 
@@ -71,41 +98,11 @@ Gazebo:
 
 実機時にGazebo MCU nodeを同時起動しない。
 
-詳細:
+詳細は [`../../docs/RUNTIME_ARCHITECTURE.md`](../../docs/RUNTIME_ARCHITECTURE.md)。
 
-- [`../../docs/RUNTIME_ARCHITECTURE.md`](../../docs/RUNTIME_ARCHITECTURE.md)
+---
 
-## 24-element and NaN rules
-
-- message lengthは常に24
-- `Use=True` axisはfiniteかつjoint limit内
-- normal roll commandは24 axis finite
-- single-axis safety publisherだけはtarget以外をNaN
-- NaN axisが誤ってUse=Trueならframeをreject
-
-## CAN channel
-
-Hardware:
-
-```bash
-python2 tools/can_interface/statemachine/main.py \
-  --can-interface socketcan \
-  --can-channel can0 \
-  --can-bitrate 500000
-```
-
-vcan:
-
-```bash
-python2 tools/can_interface/statemachine/main.py \
-  --can-interface socketcan \
-  --can-channel vcan0 \
-  --can-bitrate 500000
-```
-
-vcan以外のbench testで `can0` を開かない。
-
-## Use semantics
+## 5. Use semantics
 
 - `Use=True`: ALIGN/HOME/RUN/POSITION対象
 - `Use=False`: RUN/POSITION送信対象外
@@ -113,7 +110,9 @@ vcan以外のbench testで `can0` を開かない。
 - RUNはactive axisがcurrent sessionでaligned/homedのときだけ成立
 - Use set変更時はSTOPしてsessionを整理する
 
-## UI commands
+---
+
+## 6. UI commands
 
 ```text
 use:<axis>:0|1
@@ -126,9 +125,11 @@ run
 stop
 ```
 
-global `home` / global `set_home` はない。
+commandの意味は [`../../docs/COMMAND_REFERENCE.md`](../../docs/COMMAND_REFERENCE.md) を参照する。
 
-## CAN protocol
+---
+
+## 7. Runtime CAN protocol
 
 | purpose | ID |
 |---|---:|
@@ -147,69 +148,37 @@ POSITION:
 [0,0,0,0] + little-endian float32(rad)
 ```
 
-## Hardware limits
+MCU Configは別protocolであり、`0x080|axis` / `0x180|axis` を使用する。詳細は `CAN_MCU_CONFIG_GUIDE.md`。
 
-```text
-base   ±360 deg
-thigh   ±95 deg
-tibia  ±150 deg
-```
+---
 
-source:
+## 8. 24-element / NaN rules
 
-- [`../../docs/HARDWARE_LIMITS.md`](../../docs/HARDWARE_LIMITS.md)
+- message lengthは常に24
+- `Use=True` axisはfiniteかつjoint limit内
+- normal roll commandは24 axis finite
+- single-axis safety publisherだけはtarget以外をNaN
+- NaN axisが誤ってUse=Trueならframeをreject
 
-## Current JSONL transport profile
+physical joint limitは [`../../docs/HARDWARE_LIMITS.md`](../../docs/HARDWARE_LIMITS.md) を正本とする。
 
-2026-08-12 pre-hardware staged validation:
+---
+
+## 9. Current transport profile
 
 ```text
 resample-factor = 2
 transport rate  = 10 Hz
 ```
 
-このprofileはpublisher側のtransport policyであり、StateMachineのCAN protocolを変更しない。
+これはpublisher側のtransport policyであり、StateMachine CAN protocolとは分けて扱う。
 
-## Current verified status
+---
 
-Software / CAN:
+## 10. Related
 
-```text
-focused unified path      PASS
-all CAN tests             81/81 PASS
-vcan axis10               PASS
-vcan axes10,11,12         PASS
-```
-
-Hardware:
-
-```text
-real axis10 +0.002 rad    visually provisional PASS
-```
-
-Still open:
-
-- negative axis motion
-- ±0.005
-- one-leg
-- current factor=2/10 Hz transport with real MCU
-- multi-actuator synchronization
-- staged rolling
-
-## Emulator
-
-```bash
-python2 tools/can_interface/emulator/multi_actuator_emulator.py \
-  --interface vcan0 \
-  --axes 10,11,12
-```
-
-- [`emulator/README.md`](emulator/README.md)
-
-## Related
-
-- [`../../README.md`](../../README.md)
-- [`../../docs/RUNTIME_ARCHITECTURE.md`](../../docs/RUNTIME_ARCHITECTURE.md)
+- [`../../docs/CAN_MCU_CONFIG_GUIDE.md`](../../docs/CAN_MCU_CONFIG_GUIDE.md)
+- [`../../docs/COPY_PASTE_COMMANDS.md`](../../docs/COPY_PASTE_COMMANDS.md)
 - [`../../docs/HARDWARE_OPERATION_PROCEDURE.md`](../../docs/HARDWARE_OPERATION_PROCEDURE.md)
-- [`../../docs/HARDWARE_PRETEST_STATUS.md`](../../docs/HARDWARE_PRETEST_STATUS.md)
-- [`../../docs/Lily_8leg_Robot_Command_Reference.md`](../../docs/Lily_8leg_Robot_Command_Reference.md)
+- [`../../docs/COMMAND_REFERENCE.md`](../../docs/COMMAND_REFERENCE.md)
+- [`../mcu_config/README.md`](../mcu_config/README.md)
