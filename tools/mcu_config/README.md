@@ -8,7 +8,21 @@ CAN接続、Config CAN protocol、raw CAN例の正本は [`../../docs/CAN_MCU_CO
 
 ---
 
-## 1. 配置
+## 1. Path convention
+
+この文書のコマンドは、**`lily_motion/` のrepository rootから実行する**。
+
+個人PC固有の絶対パスは使用しない。
+
+repository内のsubdirectoryにいる場合は、必要に応じて次でrootへ戻る。
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+```
+
+---
+
+## 2. 配置
 
 ```text
 lily_motion/
@@ -20,7 +34,7 @@ lily_motion/
 
 ---
 
-## 2. 実行環境
+## 3. 実行環境
 
 - Jetson / Linux
 - Python 2.7
@@ -33,7 +47,7 @@ PythonからSocketCANを直接操作せず、`candump` / `cansend` を利用す�
 
 ---
 
-## 3. CAN接続
+## 4. CAN接続
 
 現行のCAN初期設定:
 
@@ -51,12 +65,11 @@ candump can0
 
 ---
 
-## 4. 起動
+## 5. 起動
 
-Repository rootからAxis 11だけ表示:
+Axis 11だけ表示:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 11
 ```
 
@@ -77,7 +90,7 @@ python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 0-23
 
 ---
 
-## 5. GUIの通信方針
+## 6. GUIの通信方針
 
 本GUIはCAN負荷を抑えるため、自動周期READを行わない。
 
@@ -94,13 +107,13 @@ python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 0-23
 
 ---
 
-## 6. 実験前に値を確認するだけの場合
+## 7. 実験前に値を確認するだけの場合
 
 急ぎのmotion実験では、まずこの使い方を推奨する。
 
 ```text
 1. can0をUP
-2. GUI起動
+2. repository rootからGUI起動
 3. 対象axisを選択
 4. 更新してREAD
 5. 保存値を確認
@@ -118,7 +131,7 @@ gear_ratio = 30.8
 
 ---
 
-## 7. SoftwareConfig変更手順
+## 8. SoftwareConfig変更手順
 
 WRITE / SAVEは `aliment_standby` で行う。
 
@@ -147,9 +160,7 @@ WRITE + SAVE
 
 ---
 
-## 8. HardwareConfig変更手順
-
-HardwareConfigは、SoftwareConfigと扱いが異なる。
+## 9. HardwareConfig変更手順
 
 ```text
 1. aliment_standbyを確認
@@ -170,7 +181,7 @@ HardwareConfig SAVE後は再起動を必須運用とする。
 
 ---
 
-## 9. READ / WRITE / SAVE state rule
+## 10. READ / WRITE / SAVE state rule
 
 ```text
 READ  : 全stateで可
@@ -182,7 +193,7 @@ RUN中にWRITE / SAVEしない。
 
 ---
 
-## 10. Parameter一覧
+## 11. Parameter一覧
 
 ### HardwareConfig
 
@@ -211,7 +222,7 @@ physical joint limitは [`../../docs/HARDWARE_LIMITS.md`](../../docs/HARDWARE_LI
 
 ---
 
-## 11. Config CAN概要
+## 12. Config CAN概要
 
 ```text
 Request  = 0x080 | axis
@@ -237,7 +248,7 @@ Byte 4-7 Value, little endian 32 bit
 
 ---
 
-## 12. 操作上の注意
+## 13. 操作上の注意
 
 - SAVE中に電源を切らない。
 - HardwareConfig SAVE後はpower cycleする。
@@ -248,7 +259,7 @@ Byte 4-7 Value, little endian 32 bit
 
 ---
 
-## 13. 現在確認済み
+## 14. 現在確認済み
 
 Axis 11単軸で以下を確認済み:
 
