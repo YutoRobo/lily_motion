@@ -1,681 +1,298 @@
 # Lily 8脚ロボット コマンドリファレンス
 
-更新日: 2026-08-12  
-対象: 現行 `master` 系
+更新日: 2026-08-23  
+対象: 現行 `master`
 
-この文書は、**「何をしたいか」から実行コマンドを探すための索引兼コマンド集**である。
+この文書は、**Lily runtime command、CAN ID、MCU Config protocolの意味を確認するためのリファレンス**である。
 
-実機の安全手順は必ず [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) を優先する。  
-データ形式は [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md)、runtime構成は [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) を参照する。
+実際にコマンドをコピーする場合は [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md)、CAN接続とConfig操作手順は [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) を使用する。
 
 ---
 
-## 0. 最初に見る表
+## 1. CAN関連の3層
 
-| やりたいこと | 使うもの |
+```text
+Linux SocketCAN設定
+  ↓
+ROS UI / StateMachine runtime command
+  ↓
+MCU runtime CAN protocol
+
+または
+
+Linux SocketCAN設定
+  ↓
+MCU Config GUI / raw cansend
+  ↓
+MCU Config CAN protocol
+```
+
+CAN初期設定の正本:
+
+```bash
+sudo ip link set can0 type can bitrate 500000
+sudo ip link set can0 up
+```
+
+---
+
+## 2. Runtime UI command
+
+Topic:
+
+```text
+/ui/leg_command
+```
+
+Message:
+
+```text
+std_msgs/String
+```
+
+| command | 意味 |
 |---|---|
-| repository / ROSを準備する | [1. 共通準備](#1-共通準備) |
-| CAN StateMachine / UIを起動する | [2. CAN / UI](#2-can--ui) |
-| 1軸だけ小さく動かす | [3. 単軸試験](#3-単軸試験) |
-| 1脚3軸を確認する | [4. 1脚試験](#4-1脚試験) |
-| HOMEから回転開始姿勢へ移る | [5. Air-entry](#5-air-entry) |
-| 初回実機で安全にrollを刻む | [6. Risk-split roll](#6-risk-split-roll) |
-| 1/4だけ回す | `roll_to_1of4_commands.jsonl` |
-| 2/4まで回す | `roll_to_2of4_commands.jsonl` |
-| 3/4まで回す | `roll_to_3of4_commands.jsonl` |
-| 4/4まで回す | `roll_to_4of4_commands.jsonl` |
-| Gazeboで1/4〜4/4を確認する | [7. Semantic quarter](#7-semantic-quarter) |
-| 実機で1/4〜4/4を使う | [8. 実機semantic quarter](#8-実機semantic-quarter) |
-| full combined sequenceを実行する | [9. Final combined](#9-final-combined) |
-| quarter fileを再生成・検証する | [10. Builder / checksum](#10-builder--checksum) |
-| 任意1軸へ波形を縮小して割り当てる | [11. Mapped-axis診断](#11-mapped-axis診断) |
-| trajectory開発用に直接Gazebo replayする | [12. Development direct Gazebo](#12-development-direct-gazebo) |
-| UI command / CAN IDを調べる | [付録](#付録-a-ui-command) |
+| `use:<axis>:1` | 対象axisをruntime操作対象にする |
+| `use:<axis>:0` | 対象axisをruntime操作対象から外す |
+| `align` | Use=Trueの対象へALIGN |
+| `align:<axis>` | 指定axisへALIGN |
+| `home_step:<rad>` | HOME jog stepを設定 |
+| `home_move:<axis>:1` | 指定axisを+方向へHOME jog |
+| `home_move:<axis>:-1` | 指定axisを-方向へHOME jog |
+| `set_home:<axis>` | 指定axisのlogical HOMEを設定 |
+| `run` | RUNへ遷移 |
+| `stop` | STOP |
+
+`global home` / `global set_home` はcurrent commandとして使用しない。
 
 ---
 
-## 1. 共通準備
-
-### 1.1 Repository
-
-```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
-git status -sb
-git log -1 --oneline
-```
-
-### 1.2 ROS
-
-```bash
-source /opt/ros/melodic/setup.bash
-source ~/catkin_ws/devel/setup.bash
-roscore
-```
-
-実機では `/use_sim_time` が `true` でないことを確認する。
-
-```bash
-rosparam get /use_sim_time 2>/dev/null || true
-```
-
-### 1.3 Candidate path
-
-```bash
-CANDIDATE=data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075
-STAGED=$CANDIDATE/staged
-```
-
-現行transport profile:
-
-```text
-resample-factor = 2
-rate            = 10 Hz
-```
-
-canonical publisher:
-
-```text
-tools/publish_cmdforjetson_jsonl.py
-```
-
-共通path:
-
-```text
-JSONL
-  ↓
-publish_cmdforjetson_jsonl.py
-  ↓
-/cmdForJetson
-  ├→ REAL: StateMachine → CAN → real MCU
-  └→ GAZEBO: mcu_position_interpolator_node.py → Gazebo
-```
-
-publisher自身はGazebo / realを選ばない。
-
----
-
-## 2. CAN / UI
-
-### 2.1 実機CAN
-
-```bash
-ip -details link show can0
-candump -L can0
-```
-
-StateMachine:
-
-```bash
-python2 tools/can_interface/statemachine/main.py \
-  --can-interface socketcan \
-  --can-channel can0 \
-  --can-bitrate 500000
-```
-
-UI:
-
-```bash
-python2 tools/can_interface/initUI/ui.py
-```
-
-### 2.2 Gazebo時
-
-実機CAN StateMachineは停止する。
-
-```bash
-python2 tools/gazebo/mcu_position_interpolator_node.py \
-  --input-topic /cmdForJetson \
-  --interp-duration-sec 0.100 \
-  --update-period-sec 0.002
-```
-
-**Gazebo MCU nodeと実機CAN StateMachineを同時に `/cmdForJetson` へ接続しない。**
-
----
-
-## 3. 単軸試験
-
-初回実機確認はrolling JSONLではなく専用publisherを使う。
-
-axis10 positive 0.002 rad:
-
-```bash
-python2 tools/publish_cmdforjetson_single_axis_test.py \
-  --axis 10 \
-  --direction plus \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500 \
-  --start-hold-sec 1.000 \
-  --peak-hold-sec 1.000 \
-  --end-hold-sec 1.000
-```
-
-negative:
-
-```bash
-python2 tools/publish_cmdforjetson_single_axis_test.py \
-  --axis 10 \
-  --direction minus \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500 \
-  --start-hold-sec 1.000 \
-  --peak-hold-sec 1.000 \
-  --end-hold-sec 1.000
-```
-
-このpublisherは対象axisだけfinite、他23軸をNaNにする。  
-**exactly one axisだけ `Use=True`** とする。
-
----
-
-## 4. 1脚試験
-
-例: `leg-index 3 = axes 9,10,11`。
-
-individual positive:
-
-```bash
-python2 tools/publish_cmdforjetson_one_leg_test.py \
-  --leg-index 3 \
-  --mode individual \
-  --direction plus \
-  --centers-rad 0,0,0 \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500
-```
-
-individual negative:
-
-```bash
-python2 tools/publish_cmdforjetson_one_leg_test.py \
-  --leg-index 3 \
-  --mode individual \
-  --direction minus \
-  --centers-rad 0,0,0 \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500
-```
-
-individual確認後のcoordinated test:
-
-```bash
-python2 tools/publish_cmdforjetson_one_leg_test.py \
-  --leg-index 3 \
-  --mode coordinated \
-  --direction plus \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500
-```
-
-3軸試験時は対象3軸だけ `Use=True`。
-
----
-
-## 5. Air-entry
-
-HOMEはlogical originであり、現在は全24軸0 rad。  
-Air-entryはHOMEからrolling-start postureへのJSONL遷移である。
-
-### Dry-run
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/air_entry_and_hold_only_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10 \
-  --dry-run
-```
-
-2026-08-12 expected:
-
-```text
-source_frames=135
-transport_frames=269
-transport_sha256=e1c00e23811f841e86ca4ff3fdc9a42c380e6537f6cf9623f97334a020f5a0fa
-output_topic=/cmdForJetson
-dry_run=true published_count=0
-```
-
-### Live
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/air_entry_and_hold_only_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-実機ではrobotをsuspendした状態で実施し、終了後にjoint commandを変えずcontrolled touchdownする。
-
----
-
-## 6. Risk-split roll
-
-これは**初回実機の安全進行用**である。
-
-```text
-roll_0_50_commands.jsonl
-roll_50_100_commands.jsonl
-roll_100_300_commands.jsonl
-roll_300_end_commands.jsonl
-```
-
-semanticな1/4・2/4ではない。前stageの最終姿勢から次stageへ続ける。
-
-### 0–50
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_0_50_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-### 50–100
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_50_100_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-### 100–300
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_100_300_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-### 300–end
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_300_end_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-初回実機では、この4段階を飛ばしてsemantic quarter/full combinedへ進まない。
-
----
-
-## 7. Semantic quarter
-
-### 7.1 正式frozen files
-
-```text
-$STAGED/roll_to_1of4_commands.jsonl
-$STAGED/roll_to_2of4_commands.jsonl
-$STAGED/roll_to_3of4_commands.jsonl
-$STAGED/roll_to_4of4_commands.jsonl
-$STAGED/quarter_stage_manifest.json
-```
-
-2026-08-12 data-freeze commit:
-
-```text
-2e42343dccf3b56066cdcc97e011dca328388a20
-```
-
-境界:
-
-```text
-1/4: source 0–559    =  560 frames
-2/4: source 0–1119   = 1120 frames
-3/4: source 0–1679   = 1680 frames
-4/4: source 0–2232   = 2233 frames
-```
-
-`roll_index` の連続blockを使うため、2233 frameを単純4等分したものではない。
-
-### 7.2 重要: quarterは累積
-
-```text
-roll_to_1of4 = rolling start → quarter 1 end
-roll_to_2of4 = rolling start → quarter 2 end
-roll_to_3of4 = rolling start → quarter 3 end
-roll_to_4of4 = rolling start → quarter 4 end
-```
-
-したがって、
-
-```text
-roll_to_1of4
-→ 続けて roll_to_2of4
-```
-
-とはしない。
-
-2/4を試したい場合は**rolling-start postureから `roll_to_2of4` を1本実行**する。
-
-### 7.3 Gazeboで使う
-
-Gazebo MCU nodeを起動した状態で、rolling-start postureから任意の1本を実行する。
-
-1/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_1of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-2/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_2of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-3/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_3of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-4/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_4of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-Current status:
-
-```text
-1/4 Gazebo PASS
-2/4 Gazebo PASS
-3/4 Gazebo PASS
-4/4 Gazebo PASS
-hardware NOT TESTED
-```
-
-`roll_to_4of4_commands.jsonl` は元 `commands.jsonl` とbyte-for-byte同一。
-
----
-
-## 8. 実機semantic quarter
-
-初回のrisk-split full pathがPASSした後に使用する。
-
-基本trial:
-
-```text
-HOME
-→ suspended air-entry
-→ controlled touchdown
-→ roll_to_Nof4
-→ STOP / inspect / record
-```
-
-例 2/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_2of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-3/4や4/4へ切り替える場合も、原則として別trialとしてHOME→air-entry→touchdownから開始する。
-
-**実機semantic quarterは現時点でNOT TESTED。**
-
----
-
-## 9. Final combined
-
-既存risk-split rollがすべて実機PASSした後だけ使用する。
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/combined_with_hold_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-初回実機確認には使用しない。
-
----
-
-## 10. Builder / checksum
-
-通常運用ではfrozen quarter filesをそのまま使う。  
-再生成は検証・開発・新candidate作成時のみ。
-
-builder:
-
-```text
-tools/command_generation/build_roll_quarter_stages.py
-```
-
-一時directoryへ生成:
-
-```bash
-QUARTER_DIR=$(mktemp -d /tmp/lily_quarter_stages.XXXXXX)
-
-python2 tools/command_generation/build_roll_quarter_stages.py \
-  --command-log "$CANDIDATE/commands.jsonl" \
-  --output-dir "$QUARTER_DIR"
-```
-
-Expected SHA256:
-
-```text
-source / 4/4
-e60c9de63287c5c198e78e11c1da89475b2293e6de45950cf09f5f2c170304a5
-
-1/4
-cf2f2592b6dd688a996b4bcc872509fa9ee3b85d8db53825ce2a01671a70dc58
-
-2/4
-3e54fdef3c3285b2d45f43b086081ce1dc659e7a87098981a5702561878e0bf0
-
-3/4
-2599ea79a90ae4746a10f6771589e50e0a5acf7d3a1e2e0f8e146b602cad3998
-```
-
-4/4 exact comparison:
-
-```bash
-cmp -s \
-  "$CANDIDATE/commands.jsonl" \
-  "$STAGED/roll_to_4of4_commands.jsonl" \
-  && echo "4/4 EXACT MATCH"
-```
-
-frozen `staged/` を再生成するときに `--overwrite` を安易に使わない。
-
----
-
-## 11. Mapped-axis診断
-
-24軸command logの任意logical axis波形を、小振幅relative motionとして1 physical axisへ割り当てるdiagnostic tool:
-
-```text
-tools/publish_cmdforjetson_mapped_axis_replay.py
-```
-
-まずdry-run:
-
-```bash
-python2 tools/publish_cmdforjetson_mapped_axis_replay.py \
-  --command-log "$CANDIDATE/commands.jsonl" \
-  --logical-axis 0 \
-  --physical-axis 10 \
-  --confirm-physical-axis 10 \
-  --rate 5 \
-  --scale 0.01 \
-  --limit-rad 0.005 \
-  --return-step-rad 0.001 \
-  --max-frames 50 \
-  --dry-run
-```
-
-これはabsolute rolling posture再現ではない。waveform / ROS / CAN mapping診断用。
-
----
-
-## 12. Development direct Gazebo
-
-trajectory開発・診断・履歴再現用:
-
-```bash
-python tools/gazebo/run_v3_0_gazebo_replay.py \
-  --command-log "$CANDIDATE/commands.jsonl" \
-  --strict-command-log-input \
-  --rate 15 \
-  --diagnose-command-log
-```
-
-これはformal hardware-equivalent pathではない。
-
-formal comparisonでは:
-
-```text
-publish_cmdforjetson_jsonl.py
-→ /cmdForJetson
-→ mcu_position_interpolator_node.py
-```
-
-を使う。
-
----
-
-## 13. Canonical JSONL publisher
-
-一般形:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log <commands.jsonl> \
-  --resample-factor 2 \
-  --rate 10
-```
-
-Dry-run:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log <commands.jsonl> \
-  --resample-factor 2 \
-  --rate 10 \
-  --dry-run
-```
-
-accepted source position keys:
-
-```text
-joint_command_rad
-position
-joint_positions_rad
-```
-
-すべて24要素。
-
----
-
-# 付録 A. UI command
-
-Use:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:10:1'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:10:0'"
-```
-
-ALIGN:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align:10'"
-```
-
-HOME jog:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_step:0.002'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:1'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:-1'"
-```
-
-SET HOME:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'set_home:10'"
-```
-
-RUN / STOP:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'stop'"
-```
-
-global `home` / global `set_home` は実装されていない。
-
----
-
-# 付録 B. CAN protocol
-
-| purpose | ID |
-|---|---:|
-| standby heartbeat RX | `0x0FF` |
-| ALIGN request TX | `0x000 + axis` |
-| ALIGN result RX | `0x100 + axis` |
-| HOME jog TX | `0x200 + axis` |
-| SET HOME TX | `0x300 + axis` |
-| POSITION TX | `0x400 + axis` |
-| RUN TX | `0x600 + axis` |
-| error RX | `0x0EE` |
+## 3. Runtime CAN ID
+
+| purpose | direction | CAN ID |
+|---|---|---:|
+| standby heartbeat | MCU → host | `0x0FF` |
+| ALIGN request | host → MCU | `0x000 + axis` |
+| ALIGN result | MCU → host | `0x100 + axis` |
+| HOME jog | host → MCU | `0x200 + axis` |
+| SET HOME | host → MCU | `0x300 + axis` |
+| POSITION | host → MCU | `0x400 + axis` |
+| RUN | host → MCU | `0x600 + axis` |
+| error | MCU → host | `0x0EE` |
 
 POSITION payload:
 
 ```text
-[0,0,0,0] + little-endian float32(position_rad)
+Byte 0-3 : 0x00
+Byte 4-7 : float32 little endian [rad]
+```
+
+Runtime操作は原則としてraw CAN frameを直接送らず、StateMachineを通す。
+
+---
+
+## 4. `/cmdForJetson`
+
+Production position input:
+
+```text
+Topic   : /cmdForJetson
+Message : sensor_msgs/JointState
+position length : exactly 24
+unit    : rad
+```
+
+Hardware:
+
+```text
+/cmdForJetson
+→ tools/can_interface/statemachine/
+→ CAN
+→ real MCU
+```
+
+Gazebo:
+
+```text
+/cmdForJetson
+→ tools/gazebo/mcu_position_interpolator_node.py
+→ Gazebo
+```
+
+HardwareとGazeboのconsumerを同時に接続しない。
+
+---
+
+## 5. MCU Config CAN ID
+
+Config protocolはruntime CANとは別のIDを使う。
+
+```text
+Request  = 0x080 | axis
+Response = 0x180 | axis
+```
+
+Axis 11:
+
+```text
+Request  = 0x08B
+Response = 0x18B
 ```
 
 ---
 
-# 付録 C. Current baseline
+## 6. Config payload
+
+8 byte:
 
 ```text
-candidate:
-v3_0_44_candidate_022_wide_urdf0p075
-
-pre-hardware software baseline:
-3ff47e223c2ba67b3f6bf62de327f71de5226d86
-
-semantic-quarter data freeze:
-2e42343dccf3b56066cdcc97e011dca328388a20
-
-transport:
-factor=2 / 10 Hz
-
-Gazebo MCU:
-0.100 s / 0.002 s
+Byte 0   : Command
+Byte 1   : Config Type
+Byte 2   : Parameter ID
+Byte 3   : Result / requestでは0
+Byte 4-7 : Value, little endian 32 bit
 ```
 
-関連:
+Command:
 
-- [`BASELINE.md`](BASELINE.md)
-- [`BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md)
+| value | command |
+|---:|---|
+| `0x01` | READ |
+| `0x02` | WRITE |
+| `0x03` | SAVE |
+
+Config Type:
+
+| value | type |
+|---:|---|
+| `0x01` | HardwareConfig |
+| `0x02` | SoftwareConfig |
+
+Result:
+
+| value | result |
+|---:|---|
+| `0x00` | OK |
+| `0x01` | INVALID_PARAM |
+| `0x02` | INVALID_VALUE |
+| `0x03` | INVALID_STATE |
+| `0x04` | SAVE_ERROR |
+| `0x05` | SAVE_NOT_IMPLEMENTED |
+| `0x06` | STORAGE_ERROR |
+
+---
+
+## 7. HardwareConfig parameter
+
+| ID | parameter | type |
+|---:|---|---|
+| `0x01` | gear_ratio | float32 |
+| `0x02` | motor_direction | int32 |
+| `0x03` | joint_min_rad | float32 |
+| `0x04` | joint_max_rad | float32 |
+| `0x05` | can_termination_enable | uint32 |
+
+HardwareConfigはWRITE後にSAVEし、SAVE成功後はMCUを再起動して使用する。
+
+---
+
+## 8. SoftwareConfig parameter
+
+| ID | parameter | type |
+|---:|---|---|
+| `0x01` | Kp | int32 |
+| `0x02` | Ki | int32 |
+| `0x03` | Kd | int32 |
+| `0x04` | position_jump_limit_rad | float32 |
+| `0x05` | position_error_limit_rad | float32 |
+| `0x06` | interpolation_time_ms | uint32 |
+| `0x07` | torque_ramp_target | int32 |
+| `0x08` | torque_ramp_duration_ms | uint32 |
+
+SoftwareConfig WRITEはRAMへ即時反映される。SAVEしなければpower cycle後は保存済み値へ戻る。
+
+---
+
+## 9. Config state rule
+
+```text
+READ  : 全stateで可
+WRITE : aliment_standbyのみ
+SAVE  : aliment_standbyのみ
+```
+
+通常のmotion試験中にWRITE / SAVEしない。
+
+---
+
+## 10. Axis 11 raw Config例
+
+Kp READ:
+
+```bash
+cansend can0 08B#0102010000000000
+```
+
+Kp=500 WRITE:
+
+```bash
+cansend can0 08B#02020100F4010000
+```
+
+SoftwareConfig SAVE:
+
+```bash
+cansend can0 08B#0302000000000000
+```
+
+Gear ratio READ:
+
+```bash
+cansend can0 08B#0101010000000000
+```
+
+Gear ratio=30.8 WRITE:
+
+```bash
+cansend can0 08B#020101006666F641
+```
+
+HardwareConfig SAVE:
+
+```bash
+cansend can0 08B#0301000000000000
+```
+
+通常のパラメータ調整はGUIを優先する。
+
+---
+
+## 11. Publisher一覧
+
+| 用途 | program |
+|---|---|
+| single axis | `tools/publish_cmdforjetson_single_axis_test.py` |
+| one leg | `tools/publish_cmdforjetson_one_leg_test.py` |
+| mapped axis diagnostic | `tools/publish_cmdforjetson_mapped_axis_replay.py` |
+| frozen / staged JSONL | `tools/publish_cmdforjetson_jsonl.py` |
+
+現在のstaged transport profile:
+
+```text
+resample-factor = 2
+rate = 10 Hz
+```
+
+具体的な実行コマンドは `COPY_PASTE_COMMANDS.md` に集約する。
+
+---
+
+## 12. 関連文書
+
+- [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md)
+- [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md)
 - [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md)
-- [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md)
 - [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md)
+- [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md)
+- [`../tools/can_interface/README.md`](../tools/can_interface/README.md)
+- [`../tools/mcu_config/README.md`](../tools/mcu_config/README.md)
