@@ -1,15 +1,15 @@
 # Lily 実機操作手順
 
-更新日: 2026-08-12  
-対象: `v3_0_44_candidate_022_wide_urdf0p075` staged hardware validation
+更新日: 2026-08-23  
+対象: 現行 `master` / staged hardware validation
 
-この文書は現行実機試験の正本である。
+この文書は、**実機試験の順序、安全条件、STOP条件の正本**である。
+
+コマンドそのものは [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md)、CAN接続とMCU Config操作は [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) を使用する。
 
 ---
 
-## 1. Scope
-
-現行runtime:
+## 1. Current runtime
 
 ```text
 staged JSONL
@@ -20,20 +20,18 @@ staged JSONL
 → real MCU
 ```
 
-現行transport:
+Current transport:
 
 ```text
 resample-factor = 2
 rate            = 10 Hz
 ```
 
-旧文書・旧runnerにある `--rate 3` / `--rate 5` を現行staged rollへ使用しない。
+旧runner / archiveにある別rateをcurrent staged rollへ混用しない。
 
 ---
 
-## 2. Do not run
-
-現行実機操作では次を使わない。
+## 2. 実機試験で使わないもの
 
 ```text
 archive/
@@ -42,9 +40,7 @@ tools/gazebo/mcu_position_interpolator_node.py
 tools/gazebo/run_v3_0_gazebo_replay.py
 ```
 
-Gazebo MCU nodeを実機CAN StateMachineと同時に `/cmdForJetson` へ接続しない。
-
-旧 `tools/run_hardware_staged_manual.sh` は現行entry pointではない。
+実機試験時はGazebo MCU nodeを `/cmdForJetson` へ同時接続しない。
 
 ---
 
@@ -64,7 +60,7 @@ PC側STOPはphysical emergency isolationの代替ではない。
 
 ---
 
-## 4. Git / candidate check
+## 4. Trial前のGit / baseline確認
 
 ```bash
 cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
@@ -72,39 +68,79 @@ git status -sb
 git log -1 --oneline
 ```
 
-trial recordにはcommit SHAを残す。
+current candidate / baselineの正確な値は [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) を確認する。
 
-Candidate:
-
-```text
-data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075/
-```
-
-Candidate command SHA256:
-
-```text
-e60c9de63287c5c198e78e11c1da89475b2293e6de45950cf09f5f2c170304a5
-```
-
-Pre-hardware software baseline:
-
-```text
-3ff47e223c2ba67b3f6bf62de327f71de5226d86
-```
-
-Semantic-quarter data freeze:
-
-```text
-2e42343dccf3b56066cdcc97e011dca328388a20
-```
-
-Immutable record:
-
-- [`BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md`](BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md)
+trial recordには使用commit SHAを残す。
 
 ---
 
-## 5. ROS
+## 5. CAN初期設定
+
+実機CANは次の2コマンドを使用する。
+
+```bash
+sudo ip link set can0 type can bitrate 500000
+sudo ip link set can0 up
+```
+
+確認:
+
+```bash
+ip -details link show can0
+candump -L can0
+```
+
+CANの詳細は [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) を正本とする。
+
+---
+
+## 6. MCU Configの事前確認
+
+急ぎのmotion実験では、**Configを変更せずREAD確認だけ行う**のを基本とする。
+
+Axis 11確認例:
+
+```bash
+cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion/tools/mcu_config
+python2 lily_mcu_config_editor.py --interface can0 --axes 11
+```
+
+現在Axis 11で基準へ復元確認済み:
+
+```text
+Kp         = 500
+gear_ratio = 30.8
+```
+
+必要な保存値であることを確認してからmotion試験へ進む。
+
+パラメータを変更する場合:
+
+```text
+SoftwareConfig
+aliment_standby
+→ WRITE
+→ Echo / same-parameter READ back
+→ 必要ならSoftwareConfig SAVE
+
+HardwareConfig
+aliment_standby
+→ WRITE
+→ Echo / same-parameter READ back
+→ HardwareConfig SAVE
+→ MCU power cycle
+→ READ再確認
+```
+
+SAVE中に電源を切らない。
+
+physical joint limitは [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) を正本とし、Config画面の保存値だけで安全判定しない。
+
+---
+
+## 7. ROS / StateMachine / UI起動
+
+ROS:
 
 ```bash
 source /opt/ros/melodic/setup.bash
@@ -112,123 +148,44 @@ source ~/catkin_ws/devel/setup.bash
 roscore
 ```
 
-実機では `/use_sim_time` を使用しない。
+実機では `/use_sim_time` が `true` でないことを確認する。
 
 ```bash
 rosparam get /use_sim_time 2>/dev/null || true
 ```
 
-`true`ならtrialへ進まない。
+StateMachine / UIは [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) のSection 3を使用する。
 
----
-
-## 6. CAN / UI
-
-```bash
-ip -details link show can0
-```
-
-必要に応じて:
-
-```bash
-candump -L can0
-```
-
-StateMachine:
-
-```bash
-python2 tools/can_interface/statemachine/main.py \
-  --can-interface socketcan \
-  --can-channel can0 \
-  --can-bitrate 500000
-```
-
-UI:
-
-```bash
-python2 tools/can_interface/initUI/ui.py
-```
-
-実機時、`/cmdForJetson` の意図したconsumerはCAN StateMachineだけ。
-
-確認:
+`/cmdForJetson` consumer確認:
 
 ```bash
 rostopic info /cmdForJetson
 ```
 
-unexpected extra subscriberがあれば実送信しない。
+実機時の意図したconsumerはCAN StateMachineである。
 
 ---
 
-## 7. Use / ALIGN / HOME / RUN / STOP
+## 8. Runtime state progression
 
-### Use
+基本順序:
 
-axis10だけ:
-
-```bash
-for i in $(seq 0 23); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':0'"
-done
-
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:10:1'"
+```text
+Use設定
+→ ALIGN
+→ HOME jog / SET HOME
+→ RUN
+→ position / staged motion
+→ STOP
 ```
 
-leg3 = axes9,10,11:
+RUNへ進む前に、active axisがconnected / aligned / homedであることを確認する。
 
-```bash
-for i in $(seq 0 23); do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':0'"
-done
-
-for i in 9 10 11; do
-  rostopic pub -1 /ui/leg_command std_msgs/String "data: 'use:'$i':1'"
-done
-```
-
-24-axis activeは各axis個別確認後だけ。
-
-### ALIGN
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align'"
-```
-
-indexed:
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'align:10'"
-```
-
-### HOME jog
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_step:0.002'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:1'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'home_move:10:-1'"
-```
-
-### SET HOME
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'set_home:10'"
-```
-
-### RUN / STOP
-
-```bash
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'run'"
-rostopic pub -1 /ui/leg_command std_msgs/String "data: 'stop'"
-```
-
-RUNはactive axisがconnected/aligned/homedのときだけ成立することを確認する。
-
-現在のlogical HOMEは全24軸0 rad。
+Use setを変更するときはSTOPしてsessionを整理する。
 
 ---
 
-## 8. First hardware progression
+## 9. First hardware progression
 
 初回実機は次の順序を固定する。
 
@@ -243,98 +200,50 @@ single-axis positive/negative small-angle
 → risk roll 50–100
 → risk roll 100–300
 → risk roll 300–end
+→ semantic quarter trial
 → final combined
 ```
 
-semantic quarter filesが存在していても、**初回risk-split確認を飛ばさない。**
+semantic quarter fileが存在していても、初回risk-split確認を飛ばさない。
 
 ---
 
-## 9. Single-axis validation
+## 10. Single-axis validation
 
-最初は専用publisherを使う。rolling JSONLを単軸初回試験に使わない。
+最初はrolling JSONLではなく専用publisherを使う。
 
-Positive:
-
-```bash
-python2 tools/publish_cmdforjetson_single_axis_test.py \
-  --axis 10 \
-  --direction plus \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500 \
-  --start-hold-sec 1.000 \
-  --peak-hold-sec 1.000 \
-  --end-hold-sec 1.000
+```text
++0.002 rad
+→ STOP / inspect
+→ -0.002 rad
+→ STOP / inspect
 ```
 
-Negative:
+両方向PASS後に次の振幅へ進む。
 
-```bash
-python2 tools/publish_cmdforjetson_single_axis_test.py \
-  --axis 10 \
-  --direction minus \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500 \
-  --start-hold-sec 1.000 \
-  --peak-hold-sec 1.000 \
-  --end-hold-sec 1.000
-```
-
-両方PASS後だけ ±0.005 radへ進む。
-
-各試験後STOP。
+exact commandは `COPY_PASTE_COMMANDS.md` を使用する。
 
 ---
 
-## 10. One-leg validation
+## 11. One-leg validation
 
-axes9,10,11を例とする。
+例: leg-index 3 = axes 9,10,11。
 
-まず各axisを1本ずつsingle-axis publisherで確認する。
+順序:
 
-その後、3軸だけUse=Trueとして:
-
-```bash
-python2 tools/publish_cmdforjetson_one_leg_test.py \
-  --leg-index 3 \
-  --mode individual \
-  --direction plus \
-  --centers-rad 0,0,0 \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500
+```text
+axis 9 individual
+→ axis 10 individual
+→ axis 11 individual
+→ 3-axis individual mode
+→ 3-axis coordinated mode
 ```
 
-negative:
-
-```bash
-python2 tools/publish_cmdforjetson_one_leg_test.py \
-  --leg-index 3 \
-  --mode individual \
-  --direction minus \
-  --centers-rad 0,0,0 \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500
-```
-
-individual PASS後:
-
-```bash
-python2 tools/publish_cmdforjetson_one_leg_test.py \
-  --leg-index 3 \
-  --mode coordinated \
-  --direction plus \
-  --amplitude-rad 0.002 \
-  --step-rad 0.001 \
-  --period-sec 0.500
-```
+対象3軸以外を `Use=False` とする。
 
 ---
 
-## 11. Before 24-axis motion
+## 12. Before 24-axis motion
 
 必須確認:
 
@@ -348,41 +257,9 @@ python2 tools/publish_cmdforjetson_one_leg_test.py \
 - STOP test
 - no Gazebo MCU subscriber
 - `/cmdForJetson` consumer確認
+- Config baselineが意図値であること
 
-ここで不確定要素があればair-entryへ進まない。
-
----
-
-## 12. Dry-run exact transport
-
-Candidate pathを変数化:
-
-```bash
-CANDIDATE=data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075
-STAGED=$CANDIDATE/staged
-```
-
-Air-entry dry-run:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/air_entry_and_hold_only_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10 \
-  --dry-run
-```
-
-Expected:
-
-```text
-source_frames=135
-transport_frames=269
-transport_sha256=e1c00e23811f841e86ca4ff3fdc9a42c380e6537f6cf9623f97334a020f5a0fa
-output_topic=/cmdForJetson
-dry_run=true published_count=0
-```
-
-異なる場合は実送信しない。
+不確定要素があればair-entryへ進まない。
 
 ---
 
@@ -393,19 +270,12 @@ dry_run=true published_count=0
 ```text
 robot suspended
 all required axes aligned/homed
-HOME logical posture = all 0 rad
+HOME logical posture confirmed
 RUN accepted
 physical emergency path ready
 ```
 
-実行:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/air_entry_and_hold_only_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
+Air-entryはHOMEからrolling-start postureへの遷移。
 
 確認:
 
@@ -415,15 +285,13 @@ python2 tools/publish_cmdforjetson_jsonl.py \
 - abnormal current/sound/vibration/heatなし
 - final rolling-start postureで安定
 
-publisher終了時にzero/STOPは送らない。実MCUがlast targetを保持するかをこのstageで確認する。
-
 異常時はSTOPし、touchdownへ進まない。
 
 ---
 
 ## 14. Controlled touchdown
 
-Air-entry final postureを保持したまま、fixture/base heightを制御して床へ接地させる。
+Air-entry final postureを保持したまま接地させる。
 
 確認:
 
@@ -432,107 +300,54 @@ Air-entry final postureを保持したまま、fixture/base heightを制御し�
 - unexpected slideなし
 - supportが安定
 - current/sound/vibration/heat
-- actual base/floor marginを記録
 
-joint commandで任意の「touchdown offset」を追加しない。
+joint commandへ任意のtouchdown offsetを追加しない。
 
 ---
 
 ## 15. Initial risk-split roll
 
-初回実機はここを必ず通る。
+初回は必ず次の順序で進む。
 
-MCU/StateMachine sessionを不用意に再初期化せず、前stage final postureから続ける。
-
-### 15.1 Roll 0–50
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_0_50_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-PASS後だけ次へ。
-
-### 15.2 Roll 50–100
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_50_100_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-### 15.3 Roll 100–300
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_100_300_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-### 15.4 Roll 300–end
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_300_end_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
+```text
+roll_0_50
+→ inspect
+→ roll_50_100
+→ inspect
+→ roll_100_300
+→ inspect
+→ roll_300_end
+→ inspect
 ```
 
 各stageで姿勢、接触、current、sound、vibration、temperature、STOP可能性を確認する。
 
+前stage最終姿勢から次stageへ続ける。
+
 ---
 
-## 16. Semantic quarter trials
+## 16. Semantic quarter trial
 
-### 16.1 Status
-
-正式frozen files:
+正式file:
 
 ```text
-$STAGED/roll_to_1of4_commands.jsonl
-$STAGED/roll_to_2of4_commands.jsonl
-$STAGED/roll_to_3of4_commands.jsonl
-$STAGED/roll_to_4of4_commands.jsonl
-$STAGED/quarter_stage_manifest.json
+roll_to_1of4_commands.jsonl
+roll_to_2of4_commands.jsonl
+roll_to_3of4_commands.jsonl
+roll_to_4of4_commands.jsonl
 ```
 
-Gazebo:
+quarterはrolling-startからの**累積prefix**。
+
+したがって:
 
 ```text
-1/4 PASS
-2/4 PASS
-3/4 PASS
-4/4 PASS
+1/4実行直後に2/4を続けて実行
 ```
 
-Hardware:
+とはしない。
 
-```text
-NOT TESTED
-```
-
-### 16.2 Semantic rule
-
-各fileはrolling-startからの累積prefix。
-
-```text
-1/4: rolling start → quarter 1 end
-2/4: rolling start → quarter 2 end
-3/4: rolling start → quarter 3 end
-4/4: rolling start → quarter 4 end
-```
-
-したがって、`1/4` 実行直後に `2/4` を続けて実行しない。
-
-### 16.3 When to use
-
-初回risk-split full pathがPASSした後、必要な回転量だけを独立trialとして選択する。
-
-基本手順:
+基本:
 
 ```text
 HOME
@@ -542,124 +357,53 @@ HOME
 → STOP / inspect / record
 ```
 
-別quarterへ切り替えるときは、原則としてHOMEからtrialをやり直す。
-
-### 16.4 Commands
-
-1/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_1of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-2/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_2of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-3/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_3of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-4/4:
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_to_4of4_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-`roll_to_4of4_commands.jsonl` は元 `commands.jsonl` とbyte-for-byte同一。
+別quarterは原則として別trialとしてHOMEからやり直す。
 
 ---
 
-## 17. Final combined sequence
+## 17. Final combined
 
-risk-split rollがすべて実機PASSした後だけ:
+risk-split full pathが実機PASSした後だけ使用する。
 
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/combined_with_hold_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-初回実機試験には使用しない。
+初回実機確認には使わない。
 
 ---
 
-## 18. Immediate stop criteria
+## 18. STOP criteria
 
-1つでも該当したらstage中止:
+次のいずれかで即STOP:
 
+- unexpected direction
 - unexpected axis motion
-- posture jump
-- unexpected contact
-- cable pull
-- mechanism interference
+- sudden jump
+- loss of support
+- collision / floor penetration concern
 - abnormal sound
-- abnormal current
 - abnormal vibration
-- abnormal temperature
-- `0x0EE`
-- CAN send/interface error
-- `/cmdForJetson` unexpected extra subscriber
-- timing/rate concern
-- operator concern
+- excessive heat
+- CAN error / repeated `0x0EE`
+- StateMachine state mismatch
+- operatorが挙動を説明できない
 
-異常後にそのまま再RUNしない。logとphysical stateを確認する。
+STOP後に原因を整理するまで次stageへ進まない。
 
 ---
 
-## 19. Record for every trial
+## 19. Trial record
 
-最低限:
-
-```text
-date/time
-operator
-git commit
-candidate path
-staged file
-resample factor
-transport rate
-active axes
-ALIGN/HOME result
-CAN log
-observed sign/direction
-current/sound/vibration/temperature
-STOP behavior
-PASS/FAIL
-failure reason
-```
-
-Semantic quarter trialでは追加で:
+最低限記録する。
 
 ```text
-selected quarter: 1/4, 2/4, 3/4, or 4/4
-quarter file SHA256
-rolling-start established: YES/NO
+Git commit SHA
+candidate / staged file
+axis / Use set
+MCU Config確認値
+CAN setup
+ALIGN/HOME/RUN結果
+publisher command
+PASS / FAIL
+異音・振動・温度・接触状態
+STOP理由
 ```
 
----
-
-## 20. Related documents
-
-- [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md)
-- [`BASELINE.md`](BASELINE.md)
-- [`HARDWARE_PRETEST_STATUS.md`](HARDWARE_PRETEST_STATUS.md)
-- [`Lily_8leg_Robot_Command_Reference.md`](Lily_8leg_Robot_Command_Reference.md)
-- [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md)
+Configを変更したtrialでは、変更前値、WRITE値、SAVE有無、power cycle後READ値も残す。
