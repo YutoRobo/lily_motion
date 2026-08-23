@@ -16,16 +16,19 @@
 A. 実機を動かす
    └─ CAN接続 / Config確認 / 実機試験 / 実行コマンド
 
-B. 設定値や通信仕様を調べる
+B. Gazeboで確認する
+   └─ Gazebo command path / staged replay / MCU相当補間
+
+C. 設定値や通信仕様を調べる
    └─ Jetson引数 / MCU parameter / CAN ID / StateMachine
 
-C. Motionを開発する
+D. Motionを開発する
    └─ motion生成 / JSONL / runtime構成
 
-D. 現在の状態を確認する
+E. 現在の状態を確認する
    └─ candidate / baseline / validation / hardware limit
 
-E. 文書全体・プロジェクト全体を確認する
+F. 文書全体・プロジェクト全体を確認する
    └─ project入口 / docs索引
 ```
 
@@ -38,7 +41,16 @@ E. 文書全体・プロジェクト全体を確認する
 | コマンドをそのままコピーして実行する | [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) |
 | Config GUIを使う | [`../tools/mcu_config/README.md`](../tools/mcu_config/README.md) |
 
-### B. 設定値や通信仕様を調べる
+### B. Gazeboで確認する
+
+| やりたいこと | 正本 / 最初に読む文書 |
+|---|---|
+| Gazeboで現行command pathを使う | [`GAZEBO_USAGE_GUIDE.md`](GAZEBO_USAGE_GUIDE.md) |
+| staged JSONLをGazeboで再生する | [`GAZEBO_USAGE_GUIDE.md`](GAZEBO_USAGE_GUIDE.md) |
+| Gazebo / 実機のruntime差を理解する | [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) |
+| Gazeboで使うJetson側引数を確認する | [`JETSON_ARGUMENT_REFERENCE.md`](JETSON_ARGUMENT_REFERENCE.md) |
+
+### C. 設定値や通信仕様を調べる
 
 | やりたいこと | 正本 / 最初に読む文書 |
 |---|---|
@@ -47,16 +59,16 @@ E. 文書全体・プロジェクト全体を確認する
 | UI command / CAN IDの意味を調べる | [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) |
 | CAN StateMachineを理解する | [`../tools/can_interface/README.md`](../tools/can_interface/README.md) |
 
-### C. Motionを開発する
+### D. Motionを開発する
 
 | やりたいこと | 正本 / 最初に読む文書 |
 |---|---|
 | motion生成・評価programを使う | [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) |
 | JSONLを新しく作る | [`JSONL_CREATION_GUIDE.md`](JSONL_CREATION_GUIDE.md) |
 | JSONL field / candidate package仕様を確認する | [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md) |
-| Gazebo / 実機のruntimeを理解する | [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) |
+| runtime構成を理解する | [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) |
 
-### D. 現在の状態を確認する
+### E. 現在の状態を確認する
 
 | やりたいこと | 正本 / 最初に読む文書 |
 |---|---|
@@ -64,7 +76,7 @@ E. 文書全体・プロジェクト全体を確認する
 | 現在どこまで検証済みか確認する | [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) |
 | hardware joint limitを確認する | [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) |
 
-### E. 文書全体・プロジェクト全体を確認する
+### F. 文書全体・プロジェクト全体を確認する
 
 | やりたいこと | 正本 / 最初に読む文書 |
 |---|---|
@@ -104,7 +116,29 @@ CAN ID / UI commandを忘れた
 
 ---
 
-## 3. Motion developerの推奨読書順
+## 3. Gazebo userの推奨読書順
+
+```text
+../README.md
+  ↓
+GAZEBO_USAGE_GUIDE.md
+  ↓
+CURRENT_BASELINE.md / VALIDATION_STATUS.md
+  ↓
+必要に応じて JETSON_ARGUMENT_REFERENCE.md
+  ↓
+必要に応じて RUNTIME_ARCHITECTURE.md
+```
+
+重要:
+
+- Gazebo trialではCAN StateMachineを `/cmdForJetson` に接続しない。
+- 現在このrepositoryにはGazebo world / Lily model / joint controllerを起動するlaunch fileは含まれていない。
+- 既存Gazebo環境を起動した後のcommand pathを `GAZEBO_USAGE_GUIDE.md` で正本化する。
+
+---
+
+## 4. Motion developerの推奨読書順
 
 ```text
 ../README.md
@@ -120,11 +154,14 @@ RUNTIME_ARCHITECTURE.md
 
 ---
 
-## 4. 文書の責務
+## 5. 文書の責務
 
 ```text
 ../README.md
   = project全体入口
+
+GAZEBO_USAGE_GUIDE.md
+  = Gazebo利用手順、shared command path、Gazebo MCU-equivalent interpolationの正本
 
 JETSON_ARGUMENT_REFERENCE.md
   = Jetson / host programのCLI引数、transport timing、resample_factorの正本
@@ -174,7 +211,7 @@ HARDWARE_LIMITS.md
 
 ---
 
-## 5. Jetson / MCU parameterの切り分け
+## 6. Jetson / MCU parameterの切り分け
 
 ```text
 Jetson側
@@ -212,7 +249,7 @@ MCU側
 
 ---
 
-## 6. CAN関連の正本ルール
+## 7. CAN関連の正本ルール
 
 CANについては次のように分ける。
 
@@ -249,7 +286,7 @@ sudo ip link set can0 up
 
 ---
 
-## 7. MCU Config文書ルール
+## 8. MCU Config文書ルール
 
 通常のパラメータ変更はGUIを使用する。
 
@@ -272,7 +309,7 @@ raw `cansend` は診断・protocol確認用とし、通常の調整操作の第�
 
 ---
 
-## 8. Historical documents
+## 9. Historical documents
 
 次はcurrent正本ではなく、履歴・互換用。
 
@@ -287,15 +324,16 @@ raw `cansend` は診断・protocol確認用とし、通常の調整操作の第�
 
 ---
 
-## 9. Change control
+## 10. Change control
 
 current authoritative documentを変更する場合:
 
 1. この `docs/README.md` の責務を確認する。
 2. 同じ情報を複数箇所へコピーして正本化しない。
-3. Jetson program引数を変えたら `JETSON_ARGUMENT_REFERENCE.md` を更新する。
-4. MCU Config parameterの意味・default・適用先を変えたら `MCU_PARAMETER_REFERENCE.md` を更新する。
-5. 実行コマンドを変えたら `COPY_PASTE_COMMANDS.md` を更新する。
-6. CAN protocol / Config手順を変えたら `CAN_MCU_CONFIG_GUIDE.md` を更新する。
-7. 実機の試験順序を変えたら `HARDWARE_OPERATION_PROCEDURE.md` を更新する。
-8. immutable evidence documentは書き換えない。
+3. Gazeboの利用手順を変えたら `GAZEBO_USAGE_GUIDE.md` を更新する。
+4. Jetson program引数を変えたら `JETSON_ARGUMENT_REFERENCE.md` を更新する。
+5. MCU Config parameterの意味・default・適用先を変えたら `MCU_PARAMETER_REFERENCE.md` を更新する。
+6. 実行コマンドを変えたら `COPY_PASTE_COMMANDS.md` を更新する。
+7. CAN protocol / Config手順を変えたら `CAN_MCU_CONFIG_GUIDE.md` を更新する。
+8. 実機の試験順序を変えたら `HARDWARE_OPERATION_PROCEDURE.md` を更新する。
+9. immutable evidence documentは書き換えない。
