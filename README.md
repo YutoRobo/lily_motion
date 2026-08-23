@@ -17,16 +17,19 @@ Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリ�
 A. 実機を動かす
    └─ CAN接続 / Config確認 / 実機試験 / 実行コマンド
 
-B. 設定値や通信仕様を調べる
+B. Gazeboで確認する
+   └─ Gazebo起動後のcommand path / staged replay / MCU相当補間
+
+C. 設定値や通信仕様を調べる
    └─ Jetson引数 / MCU parameter / CAN ID / StateMachine
 
-C. Motionを開発する
+D. Motionを開発する
    └─ motion生成 / JSONL作成 / runtime構成
 
-D. 現在の状態を確認する
+E. 現在の状態を確認する
    └─ current baseline / validation status / hardware limit
 
-E. 文書全体を探す
+F. 文書全体を探す
    └─ docs全体の索引
 ```
 
@@ -39,7 +42,16 @@ E. 文書全体を探す
 | コマンドをそのままコピーする | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
 | MCU Config GUIを使う | [`tools/mcu_config/README.md`](tools/mcu_config/README.md) |
 
-### B. 設定値や通信仕様を調べる
+### B. Gazeboで確認する
+
+| やりたいこと | 最初に読む文書 |
+|---|---|
+| Gazeboで現行command pathを使う | [`docs/GAZEBO_USAGE_GUIDE.md`](docs/GAZEBO_USAGE_GUIDE.md) |
+| staged JSONLをGazeboで再生する | [`docs/GAZEBO_USAGE_GUIDE.md`](docs/GAZEBO_USAGE_GUIDE.md) |
+| Gazebo / 実機のruntime差を理解する | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
+| `resample_factor` やGazebo補間引数を調べる | [`docs/JETSON_ARGUMENT_REFERENCE.md`](docs/JETSON_ARGUMENT_REFERENCE.md) |
+
+### C. 設定値や通信仕様を調べる
 
 | やりたいこと | 最初に読む文書 |
 |---|---|
@@ -48,7 +60,7 @@ E. 文書全体を探す
 | UI command / CAN IDを調べる | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md) |
 | CAN StateMachineを理解する | [`tools/can_interface/README.md`](tools/can_interface/README.md) |
 
-### C. Motionを開発する
+### D. Motionを開発する
 
 | やりたいこと | 最初に読む文書 |
 |---|---|
@@ -56,7 +68,7 @@ E. 文書全体を探す
 | JSONLを作る | [`docs/JSONL_CREATION_GUIDE.md`](docs/JSONL_CREATION_GUIDE.md) |
 | runtime構成を理解する | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
 
-### D. 現在の状態を確認する
+### E. 現在の状態を確認する
 
 | やりたいこと | 最初に読む文書 |
 |---|---|
@@ -64,7 +76,7 @@ E. 文書全体を探す
 | current validation statusを見る | [`docs/VALIDATION_STATUS.md`](docs/VALIDATION_STATUS.md) |
 | physical joint limitを見る | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
 
-### E. 文書全体を探す
+### F. 文書全体を探す
 
 | やりたいこと | 最初に読む文書 |
 |---|---|
@@ -85,7 +97,25 @@ sudo ip link set can0 up
 
 ---
 
-## 3. JetsonとMCUのparameter境界
+## 3. Gazeboの位置付け
+
+Gazeboでは、実機と同じ `/cmdForJetson` までのcommand pathを使う。
+
+```text
+staged JSONL
+→ publish_cmdforjetson_jsonl.py
+→ /cmdForJetson
+→ mcu_position_interpolator_node.py
+→ Gazebo
+```
+
+詳細は [`docs/GAZEBO_USAGE_GUIDE.md`](docs/GAZEBO_USAGE_GUIDE.md) を参照する。
+
+注意: 現在このrepositoryにはLily本体・Gazebo world・joint controllerを起動するlaunch fileは含まれていないため、既存Gazebo環境を別途起動する必要がある。
+
+---
+
+## 4. JetsonとMCUのparameter境界
 
 Jetson側:
 
@@ -127,7 +157,7 @@ MCU interpolation_time_ms
 
 ---
 
-## 4. MCU Configの位置付け
+## 5. MCU Configの位置付け
 
 MCU Config GUI:
 
@@ -158,7 +188,7 @@ HardwareConfig SAVE後はMCUを再起動する。
 
 ---
 
-## 5. Runtime architecture
+## 6. Runtime architecture
 
 ```text
 motion / staged JSONL
@@ -184,7 +214,7 @@ tools/publish_cmdforjetson_jsonl.py
 
 ---
 
-## 6. 実機試験の基本順序
+## 7. 実機試験の基本順序
 
 ```text
 CAN setup
@@ -204,7 +234,7 @@ CAN setup
 
 ---
 
-## 7. Repository map
+## 8. Repository map
 
 ```text
 lily_motion/
@@ -222,6 +252,7 @@ lily_motion/
 │   └── baselines/
 ├── docs/
 │   ├── README.md                       # documentation map
+│   ├── GAZEBO_USAGE_GUIDE.md           # Gazebo利用手順の正本
 │   ├── JETSON_ARGUMENT_REFERENCE.md    # Jetson CLI argument正本
 │   ├── MCU_PARAMETER_REFERENCE.md      # MCU Config parameter正本
 │   ├── CAN_MCU_CONFIG_GUIDE.md         # CAN / MCU Config操作正本
@@ -236,11 +267,14 @@ lily_motion/
 
 ---
 
-## 8. 文書の正本ルール
+## 9. 文書の正本ルール
 
 同じ事実を複数文書で正本化しない。
 
 ```text
+Gazebo利用手順
+→ docs/GAZEBO_USAGE_GUIDE.md
+
 Jetson program引数
 → docs/JETSON_ARGUMENT_REFERENCE.md
 
