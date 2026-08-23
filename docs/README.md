@@ -10,52 +10,97 @@
 
 ## 1. 目的別の入口
 
+まず次の大分類から選ぶ。
+
+```text
+A. 実機を動かす
+   └─ CAN接続 / Config確認 / 実機試験 / 実行コマンド
+
+B. 設定値や通信仕様を調べる
+   └─ Jetson引数 / MCU parameter / CAN ID / StateMachine
+
+C. Motionを開発する
+   └─ motion生成 / JSONL / runtime構成
+
+D. 現在の状態を確認する
+   └─ candidate / baseline / validation / hardware limit
+
+E. 文書全体・プロジェクト全体を確認する
+   └─ project入口 / docs索引
+```
+
+### A. 実機を動かす
+
 | やりたいこと | 正本 / 最初に読む文書 |
 |---|---|
-| プロジェクト全体を知る | [`../README.md`](../README.md) |
+| CANを接続する / MCU Configを確認・変更する | [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) |
+| 実機試験を行う | [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) |
+| コマンドをそのままコピーして実行する | [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) |
+| Config GUIを使う | [`../tools/mcu_config/README.md`](../tools/mcu_config/README.md) |
+
+### B. 設定値や通信仕様を調べる
+
+| やりたいこと | 正本 / 最初に読む文書 |
+|---|---|
 | Jetson programの各引数を調べる | [`JETSON_ARGUMENT_REFERENCE.md`](JETSON_ARGUMENT_REFERENCE.md) |
 | MCU Config parameterの意味を調べる | [`MCU_PARAMETER_REFERENCE.md`](MCU_PARAMETER_REFERENCE.md) |
-| CANを接続する / MCU Configを変更する | [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) |
-| コマンドをそのままコピーして実行する | [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) |
-| 実機試験を行う | [`HARDWARE_OPERATION_PROCEDURE.md`](HARDWARE_OPERATION_PROCEDURE.md) |
 | UI command / CAN IDの意味を調べる | [`COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) |
-| Config GUIを使う | [`../tools/mcu_config/README.md`](../tools/mcu_config/README.md) |
 | CAN StateMachineを理解する | [`../tools/can_interface/README.md`](../tools/can_interface/README.md) |
-| 現在のcandidate / baselineを確認する | [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) |
-| 現在どこまで検証済みか確認する | [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) |
+
+### C. Motionを開発する
+
+| やりたいこと | 正本 / 最初に読む文書 |
+|---|---|
 | motion生成・評価programを使う | [`MOTION_DEVELOPMENT_GUIDE.md`](MOTION_DEVELOPMENT_GUIDE.md) |
 | JSONLを新しく作る | [`JSONL_CREATION_GUIDE.md`](JSONL_CREATION_GUIDE.md) |
 | JSONL field / candidate package仕様を確認する | [`COMMAND_DATA_FORMAT.md`](COMMAND_DATA_FORMAT.md) |
 | Gazebo / 実機のruntimeを理解する | [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) |
+
+### D. 現在の状態を確認する
+
+| やりたいこと | 正本 / 最初に読む文書 |
+|---|---|
+| 現在のcandidate / baselineを確認する | [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) |
+| 現在どこまで検証済みか確認する | [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) |
 | hardware joint limitを確認する | [`HARDWARE_LIMITS.md`](HARDWARE_LIMITS.md) |
+
+### E. 文書全体・プロジェクト全体を確認する
+
+| やりたいこと | 正本 / 最初に読む文書 |
+|---|---|
+| プロジェクト全体を知る | [`../README.md`](../README.md) |
+| docsの構成・責務を確認する | この `docs/README.md` |
 
 ---
 
 ## 2. 実機operatorの推奨読書順
 
+毎回すべてを読むのではなく、目的に応じて使い分ける。
+
 ```text
-../README.md
-  ↓
-JETSON_ARGUMENT_REFERENCE.md
-  ↓
-MCU_PARAMETER_REFERENCE.md
+実機操作を始める
   ↓
 CAN_MCU_CONFIG_GUIDE.md
   ↓
-CURRENT_BASELINE.md
-  ↓
-VALIDATION_STATUS.md
+CURRENT_BASELINE.md / VALIDATION_STATUS.md
   ↓
 HARDWARE_OPERATION_PROCEDURE.md
   ↓
 COPY_PASTE_COMMANDS.md
 ```
 
-普段は全部を毎回読む必要はない。
+途中で意味を確認したくなった場合:
 
-- 引数を忘れた → `JETSON_ARGUMENT_REFERENCE.md`
-- MCU parameterを忘れた → `MCU_PARAMETER_REFERENCE.md`
-- 実際に操作する → `CAN_MCU_CONFIG_GUIDE.md` / `COPY_PASTE_COMMANDS.md`
+```text
+Jetson引数を忘れた
+→ JETSON_ARGUMENT_REFERENCE.md
+
+MCU parameterを忘れた
+→ MCU_PARAMETER_REFERENCE.md
+
+CAN ID / UI commandを忘れた
+→ COMMAND_REFERENCE.md
+```
 
 ---
 
