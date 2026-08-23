@@ -9,6 +9,20 @@
 
 ---
 
+## 0. Path convention
+
+この文書の `tools/...`、`docs/...`、`data/...` はすべて `lily_motion/` のrepository root基準である。
+
+個人PC固有の絶対パスは使用しない。
+
+repository内のsubdirectoryにいる場合は、必要に応じて次でrootへ戻る。
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+```
+
+---
+
 ## 1. Current runtime
 
 ```text
@@ -62,8 +76,9 @@ PC側STOPはphysical emergency isolationの代替ではない。
 
 ## 4. Trial前のGit / baseline確認
 
+repository rootから:
+
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion
 git status -sb
 git log -1 --oneline
 ```
@@ -98,11 +113,10 @@ CANの詳細は [`CAN_MCU_CONFIG_GUIDE.md`](CAN_MCU_CONFIG_GUIDE.md) を正本�
 
 急ぎのmotion実験では、**Configを変更せずREAD確認だけ行う**のを基本とする。
 
-Axis 11確認例:
+Axis 11確認例。repository rootから:
 
 ```bash
-cd ~/Programs/PythonScripts/260522_lily_remake/lily_motion/tools/mcu_config
-python2 lily_mcu_config_editor.py --interface can0 --axes 11
+python2 tools/mcu_config/lily_mcu_config_editor.py --interface can0 --axes 11
 ```
 
 現在Axis 11で基準へ復元確認済み:
