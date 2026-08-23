@@ -14,6 +14,8 @@ Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリ�
 | やりたいこと | 最初に読む文書 |
 |---|---|
 | 文書全体の地図を見る | [`docs/README.md`](docs/README.md) |
+| Jetson programの引数を調べる | [`docs/JETSON_ARGUMENT_REFERENCE.md`](docs/JETSON_ARGUMENT_REFERENCE.md) |
+| MCU parameterの意味を調べる | [`docs/MCU_PARAMETER_REFERENCE.md`](docs/MCU_PARAMETER_REFERENCE.md) |
 | CANを接続する / MCUパラメータを変更する | [`docs/CAN_MCU_CONFIG_GUIDE.md`](docs/CAN_MCU_CONFIG_GUIDE.md) |
 | コマンドをそのままコピーする | [`docs/COPY_PASTE_COMMANDS.md`](docs/COPY_PASTE_COMMANDS.md) |
 | 実機試験を行う | [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) |
@@ -42,7 +44,49 @@ sudo ip link set can0 up
 
 ---
 
-## 3. MCU Configの位置付け
+## 3. JetsonとMCUのparameter境界
+
+Jetson側:
+
+```text
+--resample-factor
+--rate
+--command-log
+--axis
+--leg-index
+--can-channel
+...
+```
+
+→ [`docs/JETSON_ARGUMENT_REFERENCE.md`](docs/JETSON_ARGUMENT_REFERENCE.md)
+
+MCU側:
+
+```text
+gear_ratio
+motor_direction
+Kp / Ki / Kd
+position jump / error limit
+interpolation_time_ms
+torque ramp
+...
+```
+
+→ [`docs/MCU_PARAMETER_REFERENCE.md`](docs/MCU_PARAMETER_REFERENCE.md)
+
+特に:
+
+```text
+Jetson --resample-factor
+≠
+MCU interpolation_time_ms
+```
+
+である。
+
+---
+
+## 4. MCU Configの位置付け
 
 MCU Config GUI:
 
@@ -73,7 +117,7 @@ HardwareConfig SAVE後はMCUを再起動する。
 
 ---
 
-## 4. Runtime architecture
+## 5. Runtime architecture
 
 ```text
 motion / staged JSONL
@@ -99,7 +143,7 @@ tools/publish_cmdforjetson_jsonl.py
 
 ---
 
-## 5. 実機試験の基本順序
+## 6. 実機試験の基本順序
 
 ```text
 CAN setup
@@ -119,7 +163,7 @@ CAN setup
 
 ---
 
-## 6. Repository map
+## 7. Repository map
 
 ```text
 lily_motion/
@@ -136,8 +180,10 @@ lily_motion/
 │   ├── reference_candidates/
 │   └── baselines/
 ├── docs/
-│   ├── README.md                # documentation map
-│   ├── CAN_MCU_CONFIG_GUIDE.md  # CAN / MCU Config正本
+│   ├── README.md                       # documentation map
+│   ├── JETSON_ARGUMENT_REFERENCE.md    # Jetson CLI argument正本
+│   ├── MCU_PARAMETER_REFERENCE.md      # MCU Config parameter正本
+│   ├── CAN_MCU_CONFIG_GUIDE.md         # CAN / MCU Config操作正本
 │   ├── COPY_PASTE_COMMANDS.md
 │   ├── HARDWARE_OPERATION_PROCEDURE.md
 │   ├── COMMAND_REFERENCE.md
@@ -149,11 +195,17 @@ lily_motion/
 
 ---
 
-## 7. 文書の正本ルール
+## 8. 文書の正本ルール
 
 同じ事実を複数文書で正本化しない。
 
 ```text
+Jetson program引数
+→ docs/JETSON_ARGUMENT_REFERENCE.md
+
+MCU parameterの意味
+→ docs/MCU_PARAMETER_REFERENCE.md
+
 CAN setup / Config操作
 → docs/CAN_MCU_CONFIG_GUIDE.md
 
