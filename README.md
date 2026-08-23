@@ -1,6 +1,6 @@
 # Lily 8脚ロボット ソフトウェア
 
-更新日: 2026-08-12  
+更新日: 2026-08-23  
 対象: `master`
 
 Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリでは脚を使って本体を次の面へ倒しながら進む**回転移動**を中心に扱う。
@@ -27,6 +27,7 @@ Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリ�
 | Gazebo / 実機のruntimeを理解したい | [`docs/RUNTIME_ARCHITECTURE.md`](docs/RUNTIME_ARCHITECTURE.md) |
 | JSONL field / candidate data仕様を知りたい | [`docs/COMMAND_DATA_FORMAT.md`](docs/COMMAND_DATA_FORMAT.md) |
 | 関節可動域を確認したい | [`docs/HARDWARE_LIMITS.md`](docs/HARDWARE_LIMITS.md) |
+| MCU Configパラメータを確認・変更・保存したい | [`tools/mcu_config/README.md`](tools/mcu_config/README.md) |
 
 文書全体の地図は [`docs/README.md`](docs/README.md) に集約する。
 
@@ -204,6 +205,7 @@ lily_motion/
 │   ├── diagnostics/             # evaluation / diagnostics
 │   ├── gazebo/                  # Gazebo execution / MCU-equivalent path
 │   ├── can_interface/           # current CAN StateMachine / UI / emulator
+│   ├── mcu_config/              # MCU Config editor / operation README
 │   └── publish_cmdforjetson_*   # canonical and staged-test publishers
 ├── data/
 │   ├── reference_candidates/    # reviewed/frozen candidates
@@ -234,6 +236,7 @@ lily_motion/
 | runtime architecture | `docs/RUNTIME_ARCHITECTURE.md` |
 | JSON / JSONL / candidate data contract | `docs/COMMAND_DATA_FORMAT.md` |
 | hardware joint limits | `docs/HARDWARE_LIMITS.md` |
+| MCU Config editorの使い方 / CAN setup | `tools/mcu_config/README.md` |
 | immutable historical baseline evidence | `docs/BASELINE_PRE_HARDWARE_GAZEBO_PASS_20260812.md` |
 
 README類はこれらを**案内する**役割とし、変わりやすいSHA、frame数、試験結果を必要以上に複製しない。
