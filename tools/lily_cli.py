@@ -16,6 +16,9 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROFILE_PATH = os.path.join(ROOT, 'config', 'lily_cli_profile.json')
+SEMANTIC_QUARTER_STAGES = set([
+    'roll-1of4', 'roll-2of4', 'roll-3of4', 'roll-4of4',
+])
 
 
 def _load_profile():
@@ -218,6 +221,7 @@ def cmd_test_axis(args):
         print('COMMAND ONLY - add --execute to publish /cmdForJetson')
         print('$ %s' % _display_cmd(cmd))
         return 0
+    print('EXECUTE - existing single-axis publisher will publish /cmdForJetson')
     return _run(cmd)
 
 
@@ -237,6 +241,7 @@ def cmd_test_leg(args):
         print('COMMAND ONLY - add --execute to publish /cmdForJetson')
         print('$ %s' % _display_cmd(cmd))
         return 0
+    print('EXECUTE - existing one-leg publisher will publish /cmdForJetson')
     return _run(cmd)
 
 
@@ -261,6 +266,12 @@ def cmd_play(args):
     if not args.execute:
         cmd.append('--dry-run')
         print('DRY RUN - add --execute to publish /cmdForJetson')
+    else:
+        print('EXECUTE - existing staged publisher will publish /cmdForJetson')
+        print('Follow docs/HARDWARE_OPERATION_PROCEDURE.md for readiness and STOP conditions.')
+        if args.stage in SEMANTIC_QUARTER_STAGES:
+            print('WARNING: semantic quarter stages are cumulative prefixes from the rolling-start posture.')
+            print('Do not chain 1/4 -> 2/4 -> 3/4 -> 4/4 as sequential segments.')
     return _run(cmd)
 
 
