@@ -33,7 +33,9 @@ DEFAULT_HISTORY_POINTS_PER_AXIS = 100000
 MAX_PLOT_POINTS_PER_TRACE = 10000
 MAX_CAN_LINES_PER_TICK = 1200
 IDLE_DRAIN_LINES_PER_TICK = 5000
-PLOT_REFRESH_SEC = 0.20
+ACTIVE_PLOT_REFRESH_SEC = 0.50
+ACTIVE_STATUS_REFRESH_SEC = 0.25
+IDLE_STATUS_REFRESH_SEC = 0.50
 CSV_FLUSH_SEC = 1.0
 
 
@@ -53,27 +55,30 @@ class EmbeddedViewerHost(tk.Frame):
 class EmbeddedViewerApp(viewer.ViewerApp):
     """ViewerApp adapted for a shared operator Tk main loop.
 
-    Two integration-specific rules matter here:
+    Integration rules:
 
     1. Retain a long telemetry history even when Duration is changed after
-       startup.  CSV and retained samples keep every selected-axis sample.
-    2. Never monopolize the Tk thread.  The standalone viewer drains candump
-       until its queue is empty and redraws Matplotlib every refresh tick.  On a
-       busy 24-axis robot that can starve the Operator StateMachine/UI callbacks.
-       The embedded viewer therefore bounds CAN work per tick and throttles plot
-       redraws while keeping acquisition continuous.
+       startup. CSV and retained samples keep every selected-axis sample.
+    2. Never monopolize the Tk thread. CAN work per tick is bounded and live
+       Matplotlib redraw is throttled.
+    3. Once measurement stops/completes, automatic plot refresh is disabled.
+       This both removes idle redraw load and allows the Matplotlib toolbar's
+       Pan/Zoom interaction to remain stable instead of being overwritten by
+       the next autoscale pass.
     """
 
     def __init__(self, root, args, axes):
-        # A modest UI tick keeps telemetry draining without making Matplotlib the
-        # dominant task on the shared Tk loop.  Plot redraw itself is throttled
-        # further below.
+        # Acquisition polling stays reasonably quick, but heavy drawing is
+        # throttled independently below.
         args.refresh_hz = 20.0
         viewer.ViewerApp.__init__(self, root, args, axes)
         self.history_points_per_axis = DEFAULT_HISTORY_POINTS_PER_AXIS
         self.max_plot_points_per_trace = MAX_PLOT_POINTS_PER_TRACE
         self._last_plot_wall = 0.0
+        self._last_status_wall = 0.0
         self._last_csv_flush_wall = 0.0
+        self._plot_dirty = False
+        self._final_plot_pending = False
         self._ensure_history_capacity(self.measurement_duration)
 
     def _required_history_points(self, duration_sec):
@@ -99,8 +104,38 @@ class EmbeddedViewerApp(viewer.ViewerApp):
             return
         self._ensure_history_capacity(duration)
         self._last_plot_wall = 0.0
+        self._last_status_wall = 0.0
         self._last_csv_flush_wall = 0.0
-        return viewer.ViewerApp._start_measurement(self)
+        self._plot_dirty = True
+        self._final_plot_pending = False
+        result = viewer.ViewerApp._start_measurement(self)
+        # Clear the previous measurement from the canvas once at START. After
+        # this, live drawing only occurs when new measurement data arrive.
+        self._refresh_plot()
+        self._plot_dirty = False
+        return result
+
+    def _finish_measurement(self, reason):
+        # Parent closes CSV and switches measurement_active off. Do not draw
+        # here directly because this may be called while consuming CAN lines.
+        result = viewer.ViewerApp._finish_measurement(self, reason)
+        self._final_plot_pending = True
+        self._plot_dirty = True
+        return result
+
+    def _store_sample(self, axis, ts, command, actual):
+        before = self.sample_count.get(axis, 0)
+        viewer.ViewerApp._store_sample(self, axis, ts, command, actual)
+        if self.sample_count.get(axis, 0) != before:
+            self._plot_dirty = True
+
+    def _clear_display(self):
+        # Parent clears retained data and requests one refresh. Mark the plot as
+        # clean afterward so idle periodic processing does not redraw it again.
+        result = viewer.ViewerApp._clear_display(self)
+        self._plot_dirty = False
+        self._final_plot_pending = False
+        return result
 
     def _decimated(self, data):
         count = len(data)
@@ -114,12 +149,7 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         return reduced
 
     def _drain_idle_lines(self):
-        """Discard queued raw CAN text cheaply while no measurement is armed.
-
-        The Monitor is a measurement tool, not the StateMachine CAN receiver.
-        Keeping a raw candump backlog while idle has no value and can hurt the
-        shared operator loop when a later measurement starts.
-        """
+        """Discard queued raw CAN text cheaply while no measurement is armed."""
         drained = 0
         while drained < IDLE_DRAIN_LINES_PER_TICK:
             try:
@@ -205,22 +235,41 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self.canvas.draw_idle()
 
     def _periodic_update(self):
-        """Bound Monitor work so Control/StateMachine callbacks stay responsive."""
+        """Acquire continuously but redraw only when it provides new information."""
         if self.stop_event.is_set():
             return
 
         try:
+            now = time.time()
+
             if self.measurement_active:
                 self._consume_can_bounded()
+
+                # Live plot: at most 2 Hz and only when samples actually changed.
+                if (self._plot_dirty and
+                        now - self._last_plot_wall >= ACTIVE_PLOT_REFRESH_SEC):
+                    self._last_plot_wall = now
+                    self._refresh_plot()
+                    self._plot_dirty = False
+
+                if now - self._last_status_wall >= ACTIVE_STATUS_REFRESH_SEC:
+                    self._last_status_wall = now
+                    self._update_status()
             else:
+                # STOP/IDLE: no Matplotlib redraw. Raw candump text is discarded
+                # only to prevent queue growth. This keeps Pan/Zoom stable.
                 self._drain_idle_lines()
 
-            now = time.time()
-            if now - self._last_plot_wall >= PLOT_REFRESH_SEC:
-                self._last_plot_wall = now
-                self._refresh_plot()
+                # Draw the final measurement exactly once after STOP/COMPLETE.
+                if self._final_plot_pending:
+                    self._refresh_plot()
+                    self._plot_dirty = False
+                    self._final_plot_pending = False
+                    self._last_plot_wall = now
 
-            self._update_status()
+                if now - self._last_status_wall >= IDLE_STATUS_REFRESH_SEC:
+                    self._last_status_wall = now
+                    self._update_status()
 
             if (self.csv_file is not None and
                     now - self._last_csv_flush_wall >= CSV_FLUSH_SEC):
@@ -273,6 +322,12 @@ class PositionMonitorPanel(object):
         tk.Label(
             selector, textvariable=self.target_status_var,
             anchor='e').pack(side=tk.RIGHT, padx=8)
+
+        hint = tk.Label(
+            self.root,
+            text='After STOP/COMPLETE: use the Matplotlib toolbar Pan / Zoom / Home; auto-rescale is paused.',
+            anchor='w', fg='#444444')
+        hint.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 2))
 
         self.viewer_container = tk.Frame(self.root)
         self.viewer_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
