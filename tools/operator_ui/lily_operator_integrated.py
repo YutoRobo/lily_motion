@@ -29,6 +29,7 @@ for path in (ROOT, THIS_DIR, STATEMACHINE_DIR):
 from state_machine import StateMachine
 from lily_operator_ui import OperatorLegControlUI, MotionPanel
 from position_monitor_panel import PositionMonitorPanel
+from mcu_config_panel import McuConfigPanel
 
 
 DEFAULT_CAN_INTERFACE = 'socketcan'
@@ -42,6 +43,31 @@ class LegacyPanelHost(tk.Frame):
 
     def title(self, *unused_args, **unused_kwargs):
         return None
+
+
+def parse_axis_spec(text):
+    axes = set()
+    for part in text.split(','):
+        part = part.strip()
+        if not part:
+            continue
+        if '-' in part:
+            first, last = part.split('-', 1)
+            start = int(first, 0)
+            end = int(last, 0)
+            if end < start:
+                start, end = end, start
+            for axis in range(start, end + 1):
+                axes.add(axis)
+        else:
+            axes.add(int(part, 0))
+    axes = sorted(axes)
+    for axis in axes:
+        if axis < 0 or axis > 23:
+            raise ValueError('Operator Config axis must be 0..23')
+    if not axes:
+        raise ValueError('at least one Config axis is required')
+    return axes
 
 
 def parse_args(argv=None):
@@ -59,6 +85,9 @@ def parse_args(argv=None):
     parser.add_argument(
         '--monitor-leg', type=int, default=4,
         help='initial one-based monitor leg 1..8 (default: 4)')
+    parser.add_argument(
+        '--config-axes', default='0-23',
+        help='MCU Config axes, e.g. 0-23 / 11 / 9-11 (default: 0-23)')
     return parser.parse_args(argv)
 
 
@@ -66,6 +95,10 @@ def main(argv=None):
     args = parse_args(argv)
     if args.monitor_leg < 1 or args.monitor_leg > 8:
         raise SystemExit('--monitor-leg must be in 1..8')
+    try:
+        config_axes = parse_axis_spec(args.config_axes)
+    except Exception as exc:
+        raise SystemExit('invalid --config-axes: %s' % exc)
 
     rospy.init_node('lily_operator', anonymous=False)
 
@@ -112,9 +145,11 @@ def main(argv=None):
     control_tab = tk.Frame(notebook)
     motion_tab = tk.Frame(notebook)
     monitor_tab = tk.Frame(notebook)
+    config_tab = tk.Frame(notebook)
     notebook.add(control_tab, text='Control')
     notebook.add(motion_tab, text='Motion')
     notebook.add(monitor_tab, text='Monitor')
+    notebook.add(config_tab, text='MCU Config')
 
     # Existing LegControlUI is mounted unchanged inside a Frame adapter.
     control_host = LegacyPanelHost(control_tab)
@@ -129,6 +164,29 @@ def main(argv=None):
         monitor_tab,
         can_interface=args.can_channel,
         default_leg_index=args.monitor_leg - 1)
+
+    config_modify_active = [False]
+
+    def allow_config_modify():
+        return (not sm.is_run) and (not motion_panel.sending)
+
+    def set_config_modify_interlock(active):
+        active = bool(active)
+        config_modify_active[0] = active
+        # Reuse the existing operator interlock behavior: while a Config
+        # WRITE/SAVE transaction is in flight, Use/ALIGN/HOME/RUN controls stay
+        # disabled.  READ does not acquire this interlock.
+        leg_ui.operator_motion_active = active or motion_panel.sending
+        leg_ui.update_motion_check_ui()
+        for axis in range(len(leg_ui.legs)):
+            leg_ui.update_leg_ui(axis)
+
+    config_panel = McuConfigPanel(
+        config_tab,
+        can_interface=args.can_channel,
+        axes=config_axes,
+        allow_modify_callback=allow_config_modify,
+        modify_active_callback=set_config_modify_interlock)
 
     tk.Button(
         header,
@@ -145,10 +203,11 @@ def main(argv=None):
             if leg.state != 'Disconnected')
         run_text = 'RUN' if sm.is_run else 'STANDBY'
         can_text = 'OK' if sm.can_interface_ok else 'ERROR'
+        config_text = ' | CONFIG WRITE/SAVE' if config_modify_active[0] else ''
         system_status_var.set(
-            'CAN %s: %s @ %d | axes online %d/24 | %s' % (
+            'CAN %s: %s @ %d | axes online %d/24 | %s%s' % (
                 args.can_channel, can_text, args.can_bitrate,
-                online, run_text))
+                online, run_text, config_text))
 
     def state_machine_tick():
         if shutting_down[0] or rospy.is_shutdown():
@@ -164,6 +223,10 @@ def main(argv=None):
         if shutting_down[0]:
             return
         shutting_down[0] = True
+        try:
+            config_panel.close()
+        except Exception:
+            pass
         try:
             monitor_panel.close()
         except Exception:
@@ -184,6 +247,11 @@ def main(argv=None):
     def close_handler():
         if not motion_panel.on_close():
             return
+        if config_panel.modify_active:
+            messagebox.showwarning(
+                'MCU Config operation active',
+                'Wait for the MCU Config WRITE/SAVE transaction to finish before closing.')
+            return
         if sm.is_run:
             messagebox.showwarning(
                 'RUN is active',
@@ -197,8 +265,9 @@ def main(argv=None):
     root.after(STATE_MACHINE_PERIOD_MS, state_machine_tick)
 
     rospy.loginfo(
-        'Integrated Lily Operator started: CAN interface=%s channel=%s bitrate=%d',
-        args.can_interface, args.can_channel, args.can_bitrate)
+        'Integrated Lily Operator started: CAN interface=%s channel=%s bitrate=%d config_axes=%s',
+        args.can_interface, args.can_channel, args.can_bitrate,
+        ','.join(str(axis) for axis in config_axes))
 
     try:
         root.mainloop()
