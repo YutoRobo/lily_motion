@@ -1,6 +1,6 @@
 # Lily Copy/Paste Commands
 
-更新日: 2026-08-23
+更新日: 2026-08-29
 
 このページは、**説明を最小限にしてコマンドをそのままコピーして実行するためのページ**である。
 
@@ -429,3 +429,28 @@ python2 tools/gazebo/mcu_position_interpolator_node.py \
 ```
 
 Gazebo時はCAN StateMachineを起動しない。
+
+---
+
+# 9. MCU position debug realtime viewer
+
+実機のMCU position-debug telemetryを受信専用で可視化する。
+
+例: leg-index 3 = axes 9,10,11。
+
+```bash
+python2 tools/diagnostics/realtime_position_debug_viewer_ui.py \
+  --interface can0 \
+  --leg-index 3
+```
+
+axisを明示する場合:
+
+```bash
+python2 tools/diagnostics/realtime_position_debug_viewer_ui.py \
+  --interface can0 \
+  --axes 9,10,11 \
+  --duration-sec 5
+```
+
+このviewerはCAN frameを送信しない。詳細は [`../tools/diagnostics/README.md`](../tools/diagnostics/README.md) を参照する。
