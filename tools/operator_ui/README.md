@@ -1,18 +1,29 @@
 # Lily Operator UI v0
 
-This branch-only UI keeps the existing CAN StateMachine and adds one operator-facing JSONL motion panel to the existing Leg Control UI.
+This branch-only UI keeps the existing CAN StateMachine logic and adds one operator-facing JSONL motion panel to the existing Leg Control UI.
 
 ## Start
 
-Run the existing StateMachine backend as usual, then start the Operator UI:
+The normal entry point is now the integrated launcher. It starts the CAN StateMachine and the Operator UI in one process:
 
 ```bash
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
+python2 tools/operator_ui/lily_operator_integrated.py \
+  --can-interface socketcan \
+  --can-channel can0 \
+  --can-bitrate 500000
+```
+
+Do **not** start `tools/can_interface/statemachine/main.py` separately when using the integrated launcher. The integrated process owns the CAN StateMachine and publishes checked motion targets to `/cmdForJetson` through the same ROS node.
+
+The older UI-only entry point remains available for diagnosis only:
+
+```bash
 python2 tools/operator_ui/lily_operator_ui.py
 ```
 
-The Operator UI publishes checked motion targets to `/cmdForJetson`. The existing StateMachine remains the CAN safety gate and only fans out position commands while RUN is active.
+When using that UI-only entry point, the existing StateMachine must be started separately or every axis will remain `Disconnected`.
 
 ## Normal multi-file flow
 
@@ -66,6 +77,8 @@ SEND is enabled only when:
 Publisher/subscriber topology is rechecked while SEND is active. If RUN is lost, another `/cmdForJetson` publisher appears, or the subscriber topology changes, the Operator UI stops publishing the remaining frames.
 
 While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available for abnormal conditions.
+
+The integrated launcher also prevents closing the application while an axis is still shown as `Running`. End the RUN session before closing so the CAN backend is not removed while the MCU remains in RUN.
 
 ## Current defaults
 
