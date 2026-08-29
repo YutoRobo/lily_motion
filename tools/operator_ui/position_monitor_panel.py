@@ -6,6 +6,12 @@ import collections
 import math
 import os
 import sys
+import time
+
+try:
+    import Queue as queue
+except ImportError:
+    import queue
 
 try:
     import Tkinter as tk
@@ -25,6 +31,10 @@ import realtime_position_debug_viewer_ui as viewer
 
 DEFAULT_HISTORY_POINTS_PER_AXIS = 100000
 MAX_PLOT_POINTS_PER_TRACE = 10000
+MAX_CAN_LINES_PER_TICK = 1200
+IDLE_DRAIN_LINES_PER_TICK = 5000
+PLOT_REFRESH_SEC = 0.20
+CSV_FLUSH_SEC = 1.0
 
 
 class EmbeddedViewerHost(tk.Frame):
@@ -41,20 +51,29 @@ class EmbeddedViewerHost(tk.Frame):
 
 
 class EmbeddedViewerApp(viewer.ViewerApp):
-    """ViewerApp with large retained history and bounded plotting cost.
+    """ViewerApp adapted for a shared operator Tk main loop.
 
-    The standalone ViewerApp sizes its deque once from the initial Duration.
-    In the Operator UI the operator often changes Duration after startup, so a
-    longer measurement could otherwise silently discard older samples.  This
-    adapter keeps a large history per axis and expands it again when a requested
-    Duration needs more room.  Plotting is decimated only for rendering; CSV and
-    retained samples keep every received measurement sample.
+    Two integration-specific rules matter here:
+
+    1. Retain a long telemetry history even when Duration is changed after
+       startup.  CSV and retained samples keep every selected-axis sample.
+    2. Never monopolize the Tk thread.  The standalone viewer drains candump
+       until its queue is empty and redraws Matplotlib every refresh tick.  On a
+       busy 24-axis robot that can starve the Operator StateMachine/UI callbacks.
+       The embedded viewer therefore bounds CAN work per tick and throttles plot
+       redraws while keeping acquisition continuous.
     """
 
     def __init__(self, root, args, axes):
+        # A modest UI tick keeps telemetry draining without making Matplotlib the
+        # dominant task on the shared Tk loop.  Plot redraw itself is throttled
+        # further below.
+        args.refresh_hz = 20.0
         viewer.ViewerApp.__init__(self, root, args, axes)
         self.history_points_per_axis = DEFAULT_HISTORY_POINTS_PER_AXIS
         self.max_plot_points_per_trace = MAX_PLOT_POINTS_PER_TRACE
+        self._last_plot_wall = 0.0
+        self._last_csv_flush_wall = 0.0
         self._ensure_history_capacity(self.measurement_duration)
 
     def _required_history_points(self, duration_sec):
@@ -79,6 +98,8 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         if duration is None:
             return
         self._ensure_history_capacity(duration)
+        self._last_plot_wall = 0.0
+        self._last_csv_flush_wall = 0.0
         return viewer.ViewerApp._start_measurement(self)
 
     def _decimated(self, data):
@@ -91,6 +112,53 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         if reduced and reduced[-1] is not data[-1]:
             reduced.append(data[-1])
         return reduced
+
+    def _drain_idle_lines(self):
+        """Discard queued raw CAN text cheaply while no measurement is armed.
+
+        The Monitor is a measurement tool, not the StateMachine CAN receiver.
+        Keeping a raw candump backlog while idle has no value and can hurt the
+        shared operator loop when a later measurement starts.
+        """
+        drained = 0
+        while drained < IDLE_DRAIN_LINES_PER_TICK:
+            try:
+                self.line_queue.get_nowait()
+            except queue.Empty:
+                break
+            drained += 1
+        return drained
+
+    def _consume_can_bounded(self):
+        """Process at most MAX_CAN_LINES_PER_TICK raw candump records."""
+        processed = 0
+        while processed < MAX_CAN_LINES_PER_TICK:
+            try:
+                line = self.line_queue.get_nowait()
+            except queue.Empty:
+                break
+            processed += 1
+
+            parsed = viewer.parse_candump_line(line)
+            if parsed is None:
+                continue
+            ts, canid, data = parsed
+            axis = self.canid_to_axis.get(canid)
+            if axis is None or len(data) < 8:
+                continue
+
+            try:
+                command = viewer.decode_float_le(data[0:4])
+                actual = viewer.decode_float_le(data[4:8])
+            except Exception:
+                continue
+            if not viewer.is_finite(command) or not viewer.is_finite(actual):
+                continue
+
+            self.last_rx_wall = time.time()
+            self._store_sample(axis, ts, command, actual)
+
+        return processed
 
     def _refresh_plot(self):
         latest_t = 0.0
@@ -135,6 +203,33 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self.err_ax.relim()
         self.err_ax.autoscale_view(scalex=False, scaley=True)
         self.canvas.draw_idle()
+
+    def _periodic_update(self):
+        """Bound Monitor work so Control/StateMachine callbacks stay responsive."""
+        if self.stop_event.is_set():
+            return
+
+        try:
+            if self.measurement_active:
+                self._consume_can_bounded()
+            else:
+                self._drain_idle_lines()
+
+            now = time.time()
+            if now - self._last_plot_wall >= PLOT_REFRESH_SEC:
+                self._last_plot_wall = now
+                self._refresh_plot()
+
+            self._update_status()
+
+            if (self.csv_file is not None and
+                    now - self._last_csv_flush_wall >= CSV_FLUSH_SEC):
+                self._last_csv_flush_wall = now
+                self.csv_file.flush()
+        except Exception as exc:
+            self.status_var.set('ERROR in embedded monitor update: %s' % exc)
+
+        self.root.after(self.refresh_ms, self._periodic_update)
 
 
 class PositionMonitorPanel(object):
