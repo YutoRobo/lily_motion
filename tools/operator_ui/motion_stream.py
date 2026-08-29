@@ -3,6 +3,18 @@ from __future__ import division, print_function
 
 import math
 import os
+import sys
+
+# This module is loaded both from the Operator UI and directly by tests via
+# imp.load_source().  When a test is launched as
+#   python2 tests/test_operator_motion_stream.py
+# Python puts tests/ (not the repository root) on sys.path.  Add the repository
+# root explicitly before importing lily_motion_v3 so both launch paths work.
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+TOOLS_DIR = os.path.dirname(THIS_DIR)
+ROOT = os.path.dirname(TOOLS_DIR)
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from lily_motion_v3.command_stream import (
     DEFAULT_POSITION_LENGTH,
