@@ -1,11 +1,46 @@
 # Lily 8脚ロボット ソフトウェア
 
-更新日: 2026-08-23  
+更新日: 2026-08-29  
 対象: `master`
 
 Lilyは **8脚 × 3自由度 = 24軸** のロボットで、本リポジトリではmotion生成、Gazebo検証、実機CAN runtime、MCU Config調整を扱う。
 
 このREADMEはプロジェクト全体の入口であり、詳細は目的別の正本文書へ分ける。
+
+## Quick start: `./lily`
+
+日常操作の入口はrepository rootの `./lily` に統一する。
+
+```bash
+./lily status
+./lily doctor real
+./lily viewer --leg-index 3
+./lily config --axes 11
+```
+
+staged motionは、引数を省略するとcurrent CLI profileのcandidate / transport設定を使用する。
+
+```bash
+./lily play roll-1of4
+```
+
+`play` は既定で **dry-run** であり、`/cmdForJetson` へpublishしない。実行する場合だけ明示的に `--execute` を付ける。
+
+```bash
+./lily play roll-1of4 --execute
+```
+
+単軸・1脚試験も既定ではcommand previewのみで、`--execute` を付けた場合だけpublisherを起動する。
+
+```bash
+./lily test axis 10
+./lily test axis 10 --execute
+
+./lily test leg 3 --mode individual
+./lily test leg 3 --mode individual --execute
+```
+
+CLIのmachine-readable defaultは [`config/lily_cli_profile.json`](config/lily_cli_profile.json) に置く。安全な実機試験順序・STOP条件は引き続き [`docs/HARDWARE_OPERATION_PROCEDURE.md`](docs/HARDWARE_OPERATION_PROCEDURE.md) を優先する。
 
 ---
 
@@ -239,8 +274,12 @@ CAN setup
 ```text
 lily_motion/
 ├── README.md
+├── lily                         # unified operator CLI launcher
+├── config/
+│   └── lily_cli_profile.json    # CLI execution defaults
 ├── lily_motion_v3/              # motion / geometry / shared runtime core
 ├── tools/
+│   ├── lily_cli.py              # CLI implementation
 │   ├── can_interface/           # CAN StateMachine / UI / emulator
 │   ├── mcu_config/              # MCU Config GUI
 │   ├── command_generation/      # command generation tools
@@ -299,5 +338,7 @@ current baseline
 current validation
 → docs/VALIDATION_STATUS.md
 ```
+
+`config/lily_cli_profile.json` は上記current baselineを実行時に参照するためのmachine-readable CLI defaultであり、baselineの安全判断やvalidation statusを置き換えない。
 
 historical `v3_0_*` noteや `archive/` はcurrent operationを上書きしない。
