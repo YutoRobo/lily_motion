@@ -6,6 +6,7 @@ import math
 import os
 import sys
 import threading
+import time
 
 try:
     import Queue as queue
@@ -97,6 +98,8 @@ class MotionPanel(object):
         self.send_abort_event = threading.Event()
         self.send_thread = None
         self.was_run_ready = False
+        self.abort_reason = ''
+        self.last_publisher_check_wall = 0.0
 
         self.path_var = tk.StringVar(value='')
         self.resample_var = tk.StringVar(value=str(DEFAULT_RESAMPLE_FACTOR))
@@ -275,6 +278,21 @@ class MotionPanel(object):
         self.progress_var.set('READY after RUN/continuity checks')
         self._refresh_continuity()
 
+    def _other_cmdforjetson_publishers(self):
+        """Return other ROS publisher node names on /cmdForJetson."""
+        try:
+            import rosgraph
+            master = rosgraph.Master(rospy.get_name())
+            publishers, unused_subscribers, unused_services = master.getSystemState()
+            nodes = []
+            for topic, topic_nodes in publishers:
+                if topic == '/cmdForJetson':
+                    nodes.extend(topic_nodes)
+            own_name = rospy.get_name()
+            return sorted(set(node for node in nodes if node != own_name)), None
+        except Exception as exc:
+            return None, str(exc)
+
     def _can_send(self):
         if self.sending or self.loaded is None:
             return False
@@ -304,9 +322,23 @@ class MotionPanel(object):
             messagebox.showerror('SEND rejected', str(exc))
             return
 
+        others, publisher_error = self._other_cmdforjetson_publishers()
+        if publisher_error is not None:
+            messagebox.showerror(
+                'SEND rejected',
+                'Could not verify /cmdForJetson publisher ownership: %s' % publisher_error)
+            return
+        if others:
+            messagebox.showerror(
+                'SEND rejected',
+                'Another /cmdForJetson publisher is active: %s' % ', '.join(others))
+            return
+
         loaded = self.loaded
         self.sending = True
         self.send_abort_event.clear()
+        self.abort_reason = ''
+        self.last_publisher_check_wall = 0.0
         self.leg_ui.operator_motion_active = True
         self.progress_var.set(
             'SENDING 0/%d @ %.3f Hz' % (
@@ -379,8 +411,9 @@ class MotionPanel(object):
                 'COMPLETE %d/%d | RUN remains active; final command is held' % (
                     count, total))
         elif status == 'interrupted':
+            detail = self.abort_reason or 'position output stopped'
             self.progress_var.set(
-                'INTERRUPTED %d/%d | position output stopped' % (count, total))
+                'INTERRUPTED %d/%d | %s' % (count, total, detail))
         else:
             self.progress_var.set(
                 'ERROR %d/%d | %s' % (count, total, error_text))
@@ -398,13 +431,26 @@ class MotionPanel(object):
         self._drain_events()
         run_ready = self._run_ready()
 
-        # Normal multi-file operation stays in RUN between files.
-        # If RUN is lost while sending, stop UI publication as well.
         if self.sending and not run_ready:
+            if not self.send_abort_event.is_set():
+                self.abort_reason = 'RUN state lost; position output stopped'
             self.send_abort_event.set()
 
-        # STOP/session reset returns axes from Running to Homed. The next RUN
-        # therefore starts again from HOME logical zero.
+        if self.sending and run_ready:
+            now = time.time()
+            if now - self.last_publisher_check_wall >= 0.2:
+                self.last_publisher_check_wall = now
+                others, publisher_error = self._other_cmdforjetson_publishers()
+                if publisher_error is not None:
+                    self.abort_reason = (
+                        'publisher ownership check failed: %s' % publisher_error)
+                    self.send_abort_event.set()
+                elif others:
+                    self.abort_reason = (
+                        'another /cmdForJetson publisher appeared: %s' %
+                        ', '.join(others))
+                    self.send_abort_event.set()
+
         if self.was_run_ready and not run_ready and not self.sending:
             self.last_sent_position = None
             self._refresh_continuity()
