@@ -1,10 +1,10 @@
 # Lily Operator UI v0
 
-This branch-only UI keeps the existing CAN StateMachine logic and adds one operator-facing JSONL motion panel to the existing Leg Control UI.
+This branch-only UI keeps the maintained CAN StateMachine behavior while integrating the operator-facing controls into one window.
 
-## Start
+## Preferred start: integrated Operator UI
 
-The normal entry point is now the integrated launcher. It starts the CAN StateMachine and the Operator UI in one process:
+The integrated launcher owns the existing StateMachine, CAN connection, Control UI, JSONL Motion panel, and receive-only position Monitor:
 
 ```bash
 source /opt/ros/melodic/setup.bash
@@ -15,17 +15,58 @@ python2 tools/operator_ui/lily_operator_integrated.py \
   --can-bitrate 500000
 ```
 
-Do **not** start `tools/can_interface/statemachine/main.py` separately when using the integrated launcher. The integrated process owns the CAN StateMachine and publishes checked motion targets to `/cmdForJetson` through the same ROS node.
+Do **not** start `tools/can_interface/statemachine/main.py` in another terminal when using the integrated launcher.
 
-The older UI-only entry point remains available for diagnosis only:
+Optional initial Monitor target:
 
 ```bash
-python2 tools/operator_ui/lily_operator_ui.py
+python2 tools/operator_ui/lily_operator_integrated.py --monitor-leg 4
 ```
 
-When using that UI-only entry point, the existing StateMachine must be started separately or every axis will remain `Disconnected`.
+`--monitor-leg` is one-based (`1..8`) and can also be changed from the Monitor tab after startup.
 
-## Normal multi-file flow
+## Window layout
+
+```text
+Lily Operator | CAN / online-axis / RUN status                         [STOP]
+----------------------------------------------------------------------------
+[ Control ] [ Motion ] [ Monitor ]
+```
+
+- **Control**: maintained Use / ALIGN / HOME / RUN controls.
+- **Motion**: one JSONL at a time, `LOAD / CHECK -> SEND`.
+- **Monitor**: embedded maintained MCU position-debug viewer.
+- **STOP**: remains visible above the tabs at all times.
+
+The Monitor remains receive-only. It reads MCU telemetry through `candump -L can0` and never sends CAN frames.
+
+## Monitor tab
+
+The Monitor tab reuses the maintained `tools/diagnostics/realtime_position_debug_viewer_ui.py` implementation rather than duplicating its parser, CSV, or plotting logic.
+
+Controls include:
+
+- target Leg `1..8`;
+- `APPLY TARGET` to rebuild the monitor for that leg's three axes;
+- measurement Duration;
+- `START / STOP / CLEAR`;
+- command / actual plots for the selected three axes;
+- tracking-error plot;
+- CSV logging behavior from the standalone viewer.
+
+Changing the target leg is rejected while a monitor measurement is active. Stop the monitor measurement first, then apply the new target.
+
+The embedded monitor uses the same telemetry definition as the standalone viewer:
+
+```text
+CAN ID   = 0x500 | axis
+byte 0-3 = internal position command [rad], float32 little-endian
+byte 4-7 = actual position [rad], float32 little-endian
+```
+
+The standalone viewer remains available for diagnosis, but it is no longer required for normal Operator UI use.
+
+## Normal multi-file motion flow
 
 The intended workflow is one RUN session with one explicitly selected JSONL at a time:
 
@@ -76,11 +117,9 @@ SEND is enabled only when:
 
 Publisher/subscriber topology is rechecked while SEND is active. If RUN is lost, another `/cmdForJetson` publisher appears, or the subscriber topology changes, the Operator UI stops publishing the remaining frames.
 
-While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available for abnormal conditions.
+While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available.
 
-The integrated launcher also prevents closing the application while an axis is still shown as `Running`. End the RUN session before closing so the CAN backend is not removed while the MCU remains in RUN.
-
-## Current defaults
+## Current motion defaults
 
 The UI starts with the committed pre-hardware transport defaults:
 
@@ -101,13 +140,13 @@ It checks the HOME -> air-entry boundary, air-entry -> full-roll boundary, the 4
 
 ## Scope of v0
 
-This v0 intentionally does not change:
+This branch still intentionally does not change:
 
 - the existing CAN StateMachine command IDs or state transitions;
 - MCU firmware;
 - the existing standalone JSONL publisher;
 - staged motion files;
-- the realtime position debug viewer;
+- the maintained standalone realtime position debug viewer;
 - the MCU Config editor.
 
-The viewer and MCU Config can be integrated into the same operator surface later after the JSONL SEND flow is validated on the Jetson.
+MCU Config integration is the next UI-integration step after the embedded Monitor is confirmed on the Jetson.
