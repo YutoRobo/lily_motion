@@ -22,6 +22,7 @@ __pycache__/
 testdata/
 plots/
 plot/
+runtime_logs/
 *.png
 *.jpg
 *.jpeg
