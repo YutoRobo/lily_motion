@@ -65,6 +65,8 @@ class EmbeddedViewerApp(viewer.ViewerApp):
        This both removes idle redraw load and allows the Matplotlib toolbar's
        Pan/Zoom interaction to remain stable instead of being overwritten by
        the next autoscale pass.
+    4. Keep the Matplotlib toolbar above the plot so Home/Pan/Zoom stay visible
+       even when the integrated window height is limited.
     """
 
     def __init__(self, root, args, axes):
@@ -72,6 +74,7 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         # throttled independently below.
         args.refresh_hz = 20.0
         viewer.ViewerApp.__init__(self, root, args, axes)
+        self._move_toolbar_above_canvas()
         self.history_points_per_axis = DEFAULT_HISTORY_POINTS_PER_AXIS
         self.max_plot_points_per_trace = MAX_PLOT_POINTS_PER_TRACE
         self._last_plot_wall = 0.0
@@ -80,6 +83,34 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self._plot_dirty = False
         self._final_plot_pending = False
         self._ensure_history_capacity(self.measurement_duration)
+
+    def _move_toolbar_above_canvas(self):
+        """Repack the existing Matplotlib toolbar above the canvas.
+
+        The maintained standalone viewer creates the toolbar at the bottom of
+        its graph frame. In the integrated Notebook that bottom edge can fall
+        outside the visible area. Repacking only affects the embedded instance;
+        the standalone viewer source is left unchanged.
+        """
+        try:
+            canvas_widget = self.canvas.get_tk_widget()
+            graph_frame = canvas_widget.master
+            packed = list(graph_frame.pack_slaves())
+            toolbar_widgets = [widget for widget in packed
+                               if widget is not canvas_widget]
+            if not toolbar_widgets:
+                return
+
+            for widget in toolbar_widgets:
+                widget.pack_forget()
+            canvas_widget.pack_forget()
+
+            for widget in toolbar_widgets:
+                widget.pack(side=tk.TOP, fill=tk.X)
+            canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        except Exception:
+            # Layout improvement must never prevent telemetry monitoring.
+            pass
 
     def _required_history_points(self, duration_sec):
         expected_hz = max(float(self.args.expected_telemetry_hz), 1.0)
@@ -325,7 +356,7 @@ class PositionMonitorPanel(object):
 
         hint = tk.Label(
             self.root,
-            text='After STOP/COMPLETE: use the Matplotlib toolbar Pan / Zoom / Home; auto-rescale is paused.',
+            text='After STOP/COMPLETE: use the toolbar above the plots for Pan / Zoom / Home; auto-rescale is paused.',
             anchor='w', fg='#444444')
         hint.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 2))
 
