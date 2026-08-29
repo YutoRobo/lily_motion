@@ -21,6 +21,7 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 TOOLS_DIR = os.path.dirname(THIS_DIR)
 ROOT = os.path.dirname(TOOLS_DIR)
 STATEMACHINE_DIR = os.path.join(TOOLS_DIR, 'can_interface', 'statemachine')
+DEFAULT_LOG_ROOT = os.path.join(ROOT, 'runtime_logs', 'operator_ui')
 
 for path in (ROOT, THIS_DIR, STATEMACHINE_DIR):
     if path not in sys.path:
@@ -30,6 +31,7 @@ from state_machine import StateMachine
 from lily_operator_ui import OperatorLegControlUI, MotionPanel
 from position_monitor_panel import PositionMonitorPanel
 from mcu_config_panel import McuConfigPanel
+from runtime_log_paths import create_operator_log_session
 
 
 DEFAULT_CAN_INTERFACE = 'socketcan'
@@ -43,6 +45,24 @@ class LegacyPanelHost(tk.Frame):
 
     def title(self, *unused_args, **unused_kwargs):
         return None
+
+
+class LoggedPositionMonitorPanel(PositionMonitorPanel):
+    """Operator Monitor that writes CSV files into the current log session."""
+
+    def __init__(self, root, log_dir, can_interface='can0', default_leg_index=3):
+        self.log_dir = os.path.abspath(log_dir)
+        PositionMonitorPanel.__init__(
+            self,
+            root,
+            can_interface=can_interface,
+            default_leg_index=default_leg_index)
+
+    def _viewer_args(self, leg_index):
+        args = PositionMonitorPanel._viewer_args(self, leg_index)
+        args.csv = os.path.join(self.log_dir, 'position_debug.csv')
+        args.no_csv = False
+        return args
 
 
 def parse_axis_spec(text):
@@ -88,6 +108,10 @@ def parse_args(argv=None):
     parser.add_argument(
         '--config-axes', default='0-23',
         help='MCU Config axes, e.g. 0-23 / 11 / 9-11 (default: 0-23)')
+    parser.add_argument(
+        '--log-root',
+        default=os.environ.get('LILY_OPERATOR_LOG_ROOT', DEFAULT_LOG_ROOT),
+        help='Operator runtime log root (default: runtime_logs/operator_ui)')
     return parser.parse_args(argv)
 
 
@@ -99,6 +123,11 @@ def main(argv=None):
         config_axes = parse_axis_spec(args.config_axes)
     except Exception as exc:
         raise SystemExit('invalid --config-axes: %s' % exc)
+
+    try:
+        log_dirs = create_operator_log_session(args.log_root)
+    except Exception as exc:
+        raise SystemExit('could not create Operator log directory: %s' % exc)
 
     rospy.init_node('lily_operator', anonymous=False)
 
@@ -160,8 +189,10 @@ def main(argv=None):
     motion_panel = MotionPanel(motion_tab, leg_ui)
 
     # Existing receive-only candump/Matplotlib viewer is embedded in Monitor.
-    monitor_panel = PositionMonitorPanel(
+    # Operator-generated CSV is routed into this launch session's monitor dir.
+    monitor_panel = LoggedPositionMonitorPanel(
         monitor_tab,
+        log_dir=log_dirs['monitor'],
         can_interface=args.can_channel,
         default_leg_index=args.monitor_leg - 1)
 
@@ -205,9 +236,10 @@ def main(argv=None):
         can_text = 'OK' if sm.can_interface_ok else 'ERROR'
         config_text = ' | CONFIG WRITE/SAVE' if config_modify_active[0] else ''
         system_status_var.set(
-            'CAN %s: %s @ %d | axes online %d/24 | %s%s' % (
+            'CAN %s: %s @ %d | axes online %d/24 | %s%s | log %s' % (
                 args.can_channel, can_text, args.can_bitrate,
-                online, run_text, config_text))
+                online, run_text, config_text,
+                os.path.basename(log_dirs['session'])))
 
     def state_machine_tick():
         if shutting_down[0] or rospy.is_shutdown():
@@ -265,9 +297,10 @@ def main(argv=None):
     root.after(STATE_MACHINE_PERIOD_MS, state_machine_tick)
 
     rospy.loginfo(
-        'Integrated Lily Operator started: CAN interface=%s channel=%s bitrate=%d config_axes=%s',
+        'Integrated Lily Operator started: CAN interface=%s channel=%s bitrate=%d config_axes=%s log_session=%s',
         args.can_interface, args.can_channel, args.can_bitrate,
-        ','.join(str(axis) for axis in config_axes))
+        ','.join(str(axis) for axis in config_axes),
+        log_dirs['session'])
 
     try:
         root.mainloop()
