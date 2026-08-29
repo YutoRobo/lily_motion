@@ -52,6 +52,7 @@ class LoggedPositionMonitorPanel(PositionMonitorPanel):
 
     def __init__(self, root, log_dir, can_interface='can0', default_leg_index=3):
         self.log_dir = os.path.abspath(log_dir)
+        self._monitor_target_generation = 0
         PositionMonitorPanel.__init__(
             self,
             root,
@@ -60,7 +61,12 @@ class LoggedPositionMonitorPanel(PositionMonitorPanel):
 
     def _viewer_args(self, leg_index):
         args = PositionMonitorPanel._viewer_args(self, leg_index)
-        args.csv = os.path.join(self.log_dir, 'position_debug.csv')
+        self._monitor_target_generation += 1
+        args.csv = os.path.join(
+            self.log_dir,
+            'position_debug_leg%02d_target%03d.csv' % (
+                int(leg_index) + 1,
+                self._monitor_target_generation))
         args.no_csv = False
         return args
 
