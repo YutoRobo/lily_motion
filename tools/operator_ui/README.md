@@ -1,0 +1,86 @@
+# Lily Operator UI v0
+
+This branch-only UI keeps the existing CAN StateMachine and adds one operator-facing JSONL motion panel to the existing Leg Control UI.
+
+## Start
+
+Run the existing StateMachine backend as usual, then start the Operator UI:
+
+```bash
+source /opt/ros/melodic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+python2 tools/operator_ui/lily_operator_ui.py
+```
+
+The Operator UI publishes checked motion targets to `/cmdForJetson`. The existing StateMachine remains the CAN safety gate and only fans out position commands while RUN is active.
+
+## Normal multi-file flow
+
+The intended workflow is one RUN session with one explicitly selected JSONL at a time:
+
+```text
+ALIGN
+-> HOME
+-> RUN
+-> select air-entry JSONL
+-> LOAD / CHECK
+-> SEND
+-> final air-entry posture is held while RUN remains active
+-> inspect / controlled touchdown
+-> select roll JSONL
+-> LOAD / CHECK
+-> SEND
+-> inspect
+```
+
+Do not press STOP between normal consecutive files. STOP remains an abnormal/emergency operation.
+
+## LOAD / CHECK
+
+LOAD never publishes a position command. It:
+
+- builds the exact transport stream using the existing `prepare_transport_stream()` path;
+- checks all transport frames are 24-axis, finite, and inside the same documented joint limits;
+- rejects a transport frame-to-frame jump of 4 deg or larger;
+- computes the transport SHA256;
+- keeps the checked transport stream in memory so SEND does not re-read the file;
+- checks the loaded first command against the current Operator UI continuity reference.
+
+For the first UI-managed motion in a RUN session, the continuity reference is HOME logical zero. After a successful SEND, the actual last published UI command becomes the reference for the next JSONL. When the RUN session is ended and axes return from Running, the reference resets to HOME zero.
+
+## SEND interlocks
+
+SEND is enabled only when:
+
+- a JSONL has passed LOAD / CHECK;
+- every `Use=True` axis is shown as `Running`;
+- the boundary to the loaded first command is below 4 deg;
+- the resample factor has not changed since LOAD;
+- the legacy RUN motion check is not active;
+- no Operator JSONL SEND is already active.
+
+While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available.
+
+If RUN is lost while SEND is active, for example because of STOP or a StateMachine error, the Operator UI stops publishing the remaining JSONL frames.
+
+## Current defaults
+
+The UI starts with the committed pre-hardware transport defaults:
+
+- resample factor: `2`
+- rate: `10 Hz`
+
+Changing the resample factor after LOAD requires another LOAD / CHECK. Rate is validated again at SEND time.
+
+## Scope of v0
+
+This v0 intentionally does not change:
+
+- the existing CAN StateMachine command IDs or state transitions;
+- MCU firmware;
+- the existing standalone JSONL publisher;
+- staged motion files;
+- the realtime position debug viewer;
+- the MCU Config editor.
+
+The viewer and MCU Config can be integrated into the same operator surface later after the JSONL SEND flow is validated on the Jetson.
