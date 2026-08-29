@@ -48,6 +48,8 @@ LOAD never publishes a position command. It:
 
 For the first UI-managed motion in a RUN session, the continuity reference is HOME logical zero. After a successful SEND, the actual last published UI command becomes the reference for the next JSONL. When the RUN session is ended and axes return from Running, the reference resets to HOME zero.
 
+Changing the file path or resample factor after LOAD disables SEND until LOAD / CHECK is performed again. This prevents the selected-file display from drifting away from the checked in-memory stream.
+
 ## SEND interlocks
 
 SEND is enabled only when:
@@ -55,13 +57,15 @@ SEND is enabled only when:
 - a JSONL has passed LOAD / CHECK;
 - every `Use=True` axis is shown as `Running`;
 - the boundary to the loaded first command is below 4 deg;
-- the resample factor has not changed since LOAD;
+- the file path and resample factor still match the checked stream;
 - the legacy RUN motion check is not active;
-- no Operator JSONL SEND is already active.
+- no Operator JSONL SEND is already active;
+- `/cmdForJetson` has exactly one subscriber;
+- no other ROS node is publishing `/cmdForJetson`.
 
-While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available.
+Publisher/subscriber topology is rechecked while SEND is active. If RUN is lost, another `/cmdForJetson` publisher appears, or the subscriber topology changes, the Operator UI stops publishing the remaining frames.
 
-If RUN is lost while SEND is active, for example because of STOP or a StateMachine error, the Operator UI stops publishing the remaining JSONL frames.
+While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available for abnormal conditions.
 
 ## Current defaults
 
@@ -71,6 +75,16 @@ The UI starts with the committed pre-hardware transport defaults:
 - rate: `10 Hz`
 
 Changing the resample factor after LOAD requires another LOAD / CHECK. Rate is validated again at SEND time.
+
+## Tests
+
+The branch includes a pure JSONL/transport test that does not require Tkinter or CAN:
+
+```bash
+python2 tests/test_operator_motion_stream.py
+```
+
+It checks the HOME -> air-entry boundary, air-entry -> full-roll boundary, the 4 deg continuity rule, and invalid resample rejection.
 
 ## Scope of v0
 
