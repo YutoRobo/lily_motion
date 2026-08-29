@@ -278,20 +278,26 @@ class MotionPanel(object):
         self.progress_var.set('READY after RUN/continuity checks')
         self._refresh_continuity()
 
-    def _other_cmdforjetson_publishers(self):
-        """Return other ROS publisher node names on /cmdForJetson."""
+    def _cmdforjetson_topology(self):
+        """Return (other_publishers, subscribers, error) for /cmdForJetson."""
         try:
             import rosgraph
             master = rosgraph.Master(rospy.get_name())
-            publishers, unused_subscribers, unused_services = master.getSystemState()
-            nodes = []
+            publishers, subscribers, unused_services = master.getSystemState()
+            pub_nodes = []
+            sub_nodes = []
             for topic, topic_nodes in publishers:
                 if topic == '/cmdForJetson':
-                    nodes.extend(topic_nodes)
+                    pub_nodes.extend(topic_nodes)
+            for topic, topic_nodes in subscribers:
+                if topic == '/cmdForJetson':
+                    sub_nodes.extend(topic_nodes)
             own_name = rospy.get_name()
-            return sorted(set(node for node in nodes if node != own_name)), None
+            other_publishers = sorted(set(
+                node for node in pub_nodes if node != own_name))
+            return other_publishers, sorted(set(sub_nodes)), None
         except Exception as exc:
-            return None, str(exc)
+            return None, None, str(exc)
 
     def _can_send(self):
         if self.sending or self.loaded is None:
@@ -301,6 +307,11 @@ class MotionPanel(object):
         if not self._run_ready():
             return False
         if self.loaded_continuity is None or not self.loaded_continuity['pass']:
+            return False
+        current_path = self.path_var.get().strip()
+        if not current_path or os.path.abspath(current_path) != self.loaded['path']:
+            return False
+        if int(self.pub.get_num_connections()) != 1:
             return False
         try:
             current_rf = self._parse_resample_factor()
@@ -314,7 +325,8 @@ class MotionPanel(object):
             messagebox.showerror(
                 'SEND rejected',
                 'SEND requires: RUN on every Use axis, a checked JSONL, '
-                'continuity PASS, unchanged resample factor, and no other UI motion.')
+                'continuity PASS, unchanged file/resample settings, exactly one '
+                '/cmdForJetson subscriber, and no other UI motion.')
             return
         try:
             rate_hz = self._parse_rate()
@@ -322,16 +334,22 @@ class MotionPanel(object):
             messagebox.showerror('SEND rejected', str(exc))
             return
 
-        others, publisher_error = self._other_cmdforjetson_publishers()
-        if publisher_error is not None:
+        others, subscribers, topology_error = self._cmdforjetson_topology()
+        if topology_error is not None:
             messagebox.showerror(
                 'SEND rejected',
-                'Could not verify /cmdForJetson publisher ownership: %s' % publisher_error)
+                'Could not verify /cmdForJetson topology: %s' % topology_error)
             return
         if others:
             messagebox.showerror(
                 'SEND rejected',
                 'Another /cmdForJetson publisher is active: %s' % ', '.join(others))
+            return
+        if len(subscribers) != 1 or int(self.pub.get_num_connections()) != 1:
+            messagebox.showerror(
+                'SEND rejected',
+                '/cmdForJetson must have exactly one subscriber. Found: %s' %
+                (', '.join(subscribers) if subscribers else 'none'))
             return
 
         loaded = self.loaded
@@ -440,15 +458,20 @@ class MotionPanel(object):
             now = time.time()
             if now - self.last_publisher_check_wall >= 0.2:
                 self.last_publisher_check_wall = now
-                others, publisher_error = self._other_cmdforjetson_publishers()
-                if publisher_error is not None:
+                others, subscribers, topology_error = self._cmdforjetson_topology()
+                if topology_error is not None:
                     self.abort_reason = (
-                        'publisher ownership check failed: %s' % publisher_error)
+                        'publisher/subscriber topology check failed: %s' % topology_error)
                     self.send_abort_event.set()
                 elif others:
                     self.abort_reason = (
                         'another /cmdForJetson publisher appeared: %s' %
                         ', '.join(others))
+                    self.send_abort_event.set()
+                elif len(subscribers) != 1 or int(self.pub.get_num_connections()) != 1:
+                    self.abort_reason = (
+                        '/cmdForJetson subscriber count changed: %s' %
+                        (', '.join(subscribers) if subscribers else 'none'))
                     self.send_abort_event.set()
 
         if self.was_run_ready and not run_ready and not self.sending:
@@ -459,11 +482,17 @@ class MotionPanel(object):
         self.send_button.config(
             state=tk.NORMAL if self._can_send() else tk.DISABLED)
         if self.loaded is not None:
+            current_path = self.path_var.get().strip()
+            path_changed = (
+                not current_path or os.path.abspath(current_path) != self.loaded['path'])
             try:
                 rf_changed = self._parse_resample_factor() != self.loaded['resample_factor']
             except MotionStreamError:
                 rf_changed = True
-            if rf_changed and not self.sending:
+            if path_changed and not self.sending:
+                self.progress_var.set(
+                    'File path changed after LOAD; LOAD / CHECK again before SEND')
+            elif rf_changed and not self.sending:
                 self.progress_var.set(
                     'Resample factor changed after LOAD; LOAD / CHECK again before SEND')
         self.root.after(100, self._periodic_update)
