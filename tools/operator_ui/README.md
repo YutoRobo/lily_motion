@@ -4,7 +4,7 @@ This branch-only UI keeps the maintained CAN StateMachine behavior while integra
 
 ## Preferred start: integrated Operator UI
 
-The integrated launcher owns the existing StateMachine, CAN connection, Control UI, JSONL Motion panel, and receive-only position Monitor:
+The integrated launcher owns the existing StateMachine, CAN connection, Control UI, JSONL Motion panel, receive-only position Monitor, and MCU Config panel:
 
 ```bash
 source /opt/ros/melodic/setup.bash
@@ -25,20 +25,65 @@ python2 tools/operator_ui/lily_operator_integrated.py --monitor-leg 4
 
 `--monitor-leg` is one-based (`1..8`) and can also be changed from the Monitor tab after startup.
 
+For a single unloaded test axis, the MCU Config tab can be limited to that axis, for example:
+
+```bash
+python2 tools/operator_ui/lily_operator_integrated.py --config-axes 11
+```
+
+Accepted examples are `--config-axes 0-23`, `--config-axes 11`, and `--config-axes 9-11`.
+
 ## Window layout
 
 ```text
 Lily Operator | CAN / online-axis / RUN status                         [STOP]
 ----------------------------------------------------------------------------
-[ Control ] [ Motion ] [ Monitor ]
+[ Control ] [ Motion ] [ Monitor ] [ MCU Config ]
 ```
 
 - **Control**: maintained Use / ALIGN / HOME / RUN controls.
 - **Motion**: one JSONL at a time, `LOAD / CHECK -> SEND`.
 - **Monitor**: embedded maintained MCU position-debug viewer.
+- **MCU Config**: READ / WRITE / SAVE / Echo for HardwareConfig and SoftwareConfig.
 - **STOP**: remains visible above the tabs at all times.
 
-The Monitor remains receive-only. It reads MCU telemetry through `candump -L can0` and never sends CAN frames.
+## MCU Config tab
+
+The Config tab reuses the maintained protocol implementation from `tools/mcu_config/lily_mcu_config_editor.py` rather than defining another CAN protocol.
+
+Protocol remains:
+
+```text
+Request ID  = 0x080 | axis
+Response ID = 0x180 | axis
+READ  = 0x01
+WRITE = 0x02
+SAVE  = 0x03
+HW    = 0x01
+SW    = 0x02
+```
+
+The integrated panel provides:
+
+- selected-axis READ;
+- all-config-axis READ / discovery;
+- HardwareConfig and SoftwareConfig parameter display;
+- WRITE to RAM;
+- response Echo plus READ-back verification;
+- HardwareConfig SAVE;
+- SoftwareConfig SAVE;
+- HardwareConfig reboot-required indication.
+
+Operator-side safety rules:
+
+- READ is allowed while RUN is active;
+- WRITE and SAVE are disabled while RUN is active;
+- WRITE and SAVE are disabled while JSONL Motion SEND is active;
+- while a Config WRITE/SAVE transaction is in flight, Use / ALIGN / HOME / RUN controls are temporarily interlocked;
+- the MCU remains the final authority and may return `INVALID_STATE` or another protocol error;
+- HardwareConfig SAVE still requires power cycling before the normal ALIGN workflow.
+
+The maintained standalone Config Editor remains available for diagnosis and comparison.
 
 ## Monitor tab
 
@@ -63,6 +108,8 @@ CAN ID   = 0x500 | axis
 byte 0-3 = internal position command [rad], float32 little-endian
 byte 4-7 = actual position [rad], float32 little-endian
 ```
+
+The embedded Monitor retains a long sample history while limiting plot redraw work so that the shared Operator UI loop is not dominated by Matplotlib.
 
 The standalone viewer remains available for diagnosis, but it is no longer required for normal Operator UI use.
 
@@ -147,6 +194,6 @@ This branch still intentionally does not change:
 - the existing standalone JSONL publisher;
 - staged motion files;
 - the maintained standalone realtime position debug viewer;
-- the MCU Config editor.
+- the maintained standalone MCU Config editor.
 
-MCU Config integration is the next UI-integration step after the embedded Monitor is confirmed on the Jetson.
+The Operator UI integrates the maintained Monitor and MCU Config functionality without removing those standalone diagnostic tools.
