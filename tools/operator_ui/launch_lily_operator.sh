@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -u
+
+THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$THIS_DIR/../.." && pwd)"
+CAN_IF="${LILY_CAN_CHANNEL:-can0}"
+CAN_BITRATE="${LILY_CAN_BITRATE:-500000}"
+ROS_SETUP="${LILY_ROS_SETUP:-/opt/ros/melodic/setup.bash}"
+CATKIN_SETUP="${LILY_CATKIN_SETUP:-$HOME/catkin_ws/devel/setup.bash}"
+LOG_ROOT="${LILY_OPERATOR_LOG_ROOT:-$ROOT/runtime_logs/operator_ui}"
+BOOT_LOG_DIR="$LOG_ROOT/launcher"
+mkdir -p "$BOOT_LOG_DIR"
+BOOT_LOG="$BOOT_LOG_DIR/launcher_$(date +%Y%m%d_%H%M%S).log"
+
+log() {
+  printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$BOOT_LOG"
+}
+
+show_error() {
+  local msg="$1"
+  log "ERROR: $msg"
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --error --title="Lily Operator" --text="$msg" >/dev/null 2>&1 || true
+  elif command -v xmessage >/dev/null 2>&1; then
+    xmessage -center "Lily Operator\n\n$msg" >/dev/null 2>&1 || true
+  fi
+}
+
+configure_can() {
+  if ! command -v ip >/dev/null 2>&1; then
+    show_error "'ip' command was not found. Install iproute2."
+    return 1
+  fi
+
+  if ! ip link show "$CAN_IF" >/dev/null 2>&1; then
+    show_error "CAN interface '$CAN_IF' was not found."
+    return 1
+  fi
+
+  local details
+  details="$(ip -details link show "$CAN_IF" 2>/dev/null || true)"
+  local bitrate_ok=0
+  local up_ok=0
+  if printf '%s\n' "$details" | grep -Eq "bitrate[[:space:]]+$CAN_BITRATE([[:space:]]|$)"; then
+    bitrate_ok=1
+  fi
+  if printf '%s\n' "$details" | head -n 1 | grep -q '<[^>]*UP[^>]*>'; then
+    up_ok=1
+  fi
+
+  if [ "$bitrate_ok" -eq 1 ] && [ "$up_ok" -eq 1 ]; then
+    log "$CAN_IF already UP at $CAN_BITRATE bit/s"
+    return 0
+  fi
+
+  if ! command -v pkexec >/dev/null 2>&1; then
+    show_error "CAN setup needs administrator permission, but 'pkexec' was not found."
+    return 1
+  fi
+
+  log "Configuring $CAN_IF at $CAN_BITRATE bit/s (administrator authentication may appear)"
+  if [ "$bitrate_ok" -eq 1 ]; then
+    pkexec /sbin/ip link set "$CAN_IF" up >>"$BOOT_LOG" 2>&1 || \
+      pkexec /bin/ip link set "$CAN_IF" up >>"$BOOT_LOG" 2>&1 || {
+        show_error "Failed to bring $CAN_IF up. See $BOOT_LOG"
+        return 1
+      }
+  else
+    local ip_cmd=""
+    if [ -x /sbin/ip ]; then
+      ip_cmd=/sbin/ip
+    elif [ -x /bin/ip ]; then
+      ip_cmd=/bin/ip
+    else
+      ip_cmd="$(command -v ip)"
+    fi
+    pkexec /bin/sh -c \
+      "'$ip_cmd' link set '$CAN_IF' down 2>/dev/null || true; '$ip_cmd' link set '$CAN_IF' type can bitrate '$CAN_BITRATE' && '$ip_cmd' link set '$CAN_IF' up" \
+      >>"$BOOT_LOG" 2>&1 || {
+        show_error "Failed to configure $CAN_IF at $CAN_BITRATE bit/s. See $BOOT_LOG"
+        return 1
+      }
+  fi
+
+  details="$(ip -details link show "$CAN_IF" 2>/dev/null || true)"
+  if ! printf '%s\n' "$details" | grep -Eq "bitrate[[:space:]]+$CAN_BITRATE([[:space:]]|$)"; then
+    show_error "$CAN_IF did not report bitrate $CAN_BITRATE after setup."
+    return 1
+  fi
+  if ! printf '%s\n' "$details" | head -n 1 | grep -q '<[^>]*UP[^>]*>'; then
+    show_error "$CAN_IF is not UP after setup."
+    return 1
+  fi
+  log "$CAN_IF configured successfully"
+}
+
+setup_ros_environment() {
+  if [ ! -f "$ROS_SETUP" ]; then
+    show_error "ROS setup file was not found: $ROS_SETUP"
+    return 1
+  fi
+  # shellcheck disable=SC1090
+  source "$ROS_SETUP"
+  log "Loaded ROS environment: $ROS_SETUP"
+
+  if [ -f "$CATKIN_SETUP" ]; then
+    # shellcheck disable=SC1090
+    source "$CATKIN_SETUP"
+    log "Loaded catkin workspace: $CATKIN_SETUP"
+  else
+    log "Catkin setup not found; continuing without it: $CATKIN_SETUP"
+  fi
+}
+
+ensure_roscore() {
+  if command -v rosparam >/dev/null 2>&1 && rosparam list >/dev/null 2>&1; then
+    log "ROS master already available at ${ROS_MASTER_URI:-default}"
+    return 0
+  fi
+
+  if ! command -v roscore >/dev/null 2>&1; then
+    show_error "roscore was not found after loading the ROS environment."
+    return 1
+  fi
+
+  log "ROS master not reachable; starting roscore"
+  roscore >>"$BOOT_LOG" 2>&1 &
+  ROSCORE_PID=$!
+  export ROSCORE_PID
+
+  local i
+  for i in $(seq 1 30); do
+    if rosparam list >/dev/null 2>&1; then
+      log "roscore ready (pid=$ROSCORE_PID)"
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  show_error "roscore did not become ready. See $BOOT_LOG"
+  return 1
+}
+
+main() {
+  log "Lily Operator launcher start"
+  log "Repository: $ROOT"
+  log "Architecture: $(uname -m)"
+
+  configure_can || return 1
+  setup_ros_environment || return 1
+  ensure_roscore || return 1
+
+  if ! command -v python2 >/dev/null 2>&1; then
+    show_error "python2 was not found."
+    return 1
+  fi
+
+  cd "$ROOT" || return 1
+  log "Starting integrated Operator UI"
+  exec python2 tools/operator_ui/lily_operator_integrated.py \
+    --can-interface socketcan \
+    --can-channel "$CAN_IF" \
+    --can-bitrate "$CAN_BITRATE" \
+    >>"$BOOT_LOG" 2>&1
+}
+
+main "$@"
