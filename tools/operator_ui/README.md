@@ -135,7 +135,11 @@ Inside the integrated Operator UI:
 Monitor -> LOAD CSV... -> select position_debug_*.csv
 ```
 
-Offline CSV mode is static: it does not send CAN frames and stops the Monitor's receive-only `candump` reader after the file is loaded. Use the Matplotlib toolbar above the plots for `Home / Pan / Zoom`.
+Offline CSV mode is static: it does not send CAN frames, stops the Monitor's receive-only `candump` reader after the file is loaded, and performs no automatic plot rescaling. Use the Matplotlib toolbar above the plots for `Home / Pan / Zoom`.
+
+While the CSV is displayed, `START` remains available. Pressing `START` clears the offline waveform, restarts receive-only `candump`, and begins a fresh live measurement using the **same axis IDs that were loaded from the CSV**. The Duration field remains editable, and the new live measurement is logged to CSV using the normal Monitor logging rules.
+
+To switch to a different leg instead, choose the target Leg and press `APPLY TARGET`.
 
 For an analysis PC that does not need the integrated StateMachine or ROS UI, the Monitor can also be started directly:
 
@@ -144,7 +148,7 @@ python2 tools/operator_ui/position_monitor_panel.py \
   --csv /path/to/position_debug_leg05_target002.csv
 ```
 
-This direct CSV-viewer path does not initialize the Operator StateMachine or ROS. A live CAN connection is not required to inspect an already recorded CSV. `Tkinter` and `Matplotlib` are still required on the analysis PC.
+This direct CSV-viewer path does not initialize the Operator StateMachine or ROS. A live CAN connection is not required to inspect an already recorded CSV. `Tkinter` and `Matplotlib` are still required on the analysis PC. If that PC has the corresponding SocketCAN interface available, pressing `START` from the offline display attempts a new live capture for the CSV's axes.
 
 The canonical CSV columns used for loading are:
 
@@ -156,8 +160,6 @@ actual_rad
 ```
 
 The tracking-error and degree values are recomputed from these columns when the CSV is loaded. The normal Monitor CSV contains these columns plus timestamp and precomputed error/degree columns.
-
-To leave offline mode and return to live monitoring in the integrated UI, choose the target Leg and press `APPLY TARGET`.
 
 The standalone realtime viewer remains available for diagnosis, but it is no longer required for normal Operator UI use.
 
