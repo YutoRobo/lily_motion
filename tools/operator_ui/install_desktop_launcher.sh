@@ -11,6 +11,7 @@ APP_FILE="$APP_DIR/lily-operator.desktop"
 VCAN_APP_FILE="$APP_DIR/lily-operator-vcan0.desktop"
 GAZEBO_APP_FILE="$APP_DIR/lily-operator-gazebo.desktop"
 SYNC_APP_FILE="$APP_DIR/lily-gazebo-sync-bridge.desktop"
+VCAN_SYNC_APP_FILE="$APP_DIR/lily-gazebo-sync-bridge-vcan0.desktop"
 
 if command -v xdg-user-dir >/dev/null 2>&1; then
   DESKTOP_DIR="$(xdg-user-dir DESKTOP)"
@@ -24,6 +25,7 @@ DESKTOP_FILE="$DESKTOP_DIR/Lily Operator.desktop"
 VCAN_DESKTOP_FILE="$DESKTOP_DIR/Lily Operator (vcan0).desktop"
 GAZEBO_DESKTOP_FILE="$DESKTOP_DIR/Lily Operator (Gazebo).desktop"
 SYNC_DESKTOP_FILE="$DESKTOP_DIR/Lily Gazebo Sync Bridge.desktop"
+VCAN_SYNC_DESKTOP_FILE="$DESKTOP_DIR/Lily Gazebo Sync Bridge (vcan0).desktop"
 
 mkdir -p "$APP_DIR"
 mkdir -p "$DESKTOP_DIR"
@@ -80,17 +82,32 @@ Categories=Development;Engineering;
 StartupNotify=true
 EOF
 
+cat > "$VCAN_SYNC_APP_FILE" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Lily Gazebo Sync Bridge (vcan0)
+Comment=Mirror position commands already sent on vcan0 into Gazebo
+Exec=env LILY_CAN_CHANNEL=vcan0 bash "$SYNC_LAUNCHER"
+Path=$ROOT
+Terminal=true
+Icon=applications-graphics
+Categories=Development;Engineering;
+StartupNotify=true
+EOF
+
 cp "$APP_FILE" "$DESKTOP_FILE"
 cp "$VCAN_APP_FILE" "$VCAN_DESKTOP_FILE"
 cp "$GAZEBO_APP_FILE" "$GAZEBO_DESKTOP_FILE"
 cp "$SYNC_APP_FILE" "$SYNC_DESKTOP_FILE"
-chmod +x "$DESKTOP_FILE" "$VCAN_DESKTOP_FILE" "$GAZEBO_DESKTOP_FILE" "$SYNC_DESKTOP_FILE"
+cp "$VCAN_SYNC_APP_FILE" "$VCAN_SYNC_DESKTOP_FILE"
+chmod +x "$DESKTOP_FILE" "$VCAN_DESKTOP_FILE" "$GAZEBO_DESKTOP_FILE" "$SYNC_DESKTOP_FILE" "$VCAN_SYNC_DESKTOP_FILE"
 
 if command -v gio >/dev/null 2>&1; then
   gio set "$DESKTOP_FILE" metadata::trusted true >/dev/null 2>&1 || true
   gio set "$VCAN_DESKTOP_FILE" metadata::trusted true >/dev/null 2>&1 || true
   gio set "$GAZEBO_DESKTOP_FILE" metadata::trusted true >/dev/null 2>&1 || true
   gio set "$SYNC_DESKTOP_FILE" metadata::trusted true >/dev/null 2>&1 || true
+  gio set "$VCAN_SYNC_DESKTOP_FILE" metadata::trusted true >/dev/null 2>&1 || true
 fi
 
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -98,17 +115,20 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 printf 'Installed Lily launchers:\n'
-printf '  Physical CAN Desktop:   %s\n' "$DESKTOP_FILE"
-printf '  Virtual CAN Desktop:    %s\n' "$VCAN_DESKTOP_FILE"
-printf '  Gazebo-only Desktop:    %s\n' "$GAZEBO_DESKTOP_FILE"
-printf '  Gazebo Sync Bridge:     %s\n' "$SYNC_DESKTOP_FILE"
-printf '  Physical CAN App menu:  %s\n' "$APP_FILE"
-printf '  Virtual CAN App menu:   %s\n' "$VCAN_APP_FILE"
-printf '  Gazebo-only App menu:   %s\n' "$GAZEBO_APP_FILE"
-printf '  Gazebo Sync App menu:   %s\n' "$SYNC_APP_FILE"
+printf '  Physical CAN Desktop:     %s\n' "$DESKTOP_FILE"
+printf '  Virtual CAN Desktop:      %s\n' "$VCAN_DESKTOP_FILE"
+printf '  Gazebo-only Desktop:      %s\n' "$GAZEBO_DESKTOP_FILE"
+printf '  Gazebo Sync Bridge:       %s\n' "$SYNC_DESKTOP_FILE"
+printf '  Gazebo Sync vcan0 Bridge: %s\n' "$VCAN_SYNC_DESKTOP_FILE"
+printf '  Physical CAN App menu:    %s\n' "$APP_FILE"
+printf '  Virtual CAN App menu:     %s\n' "$VCAN_APP_FILE"
+printf '  Gazebo-only App menu:     %s\n' "$GAZEBO_APP_FILE"
+printf '  Gazebo Sync App menu:     %s\n' "$SYNC_APP_FILE"
+printf '  Gazebo Sync vcan0 menu:   %s\n' "$VCAN_SYNC_APP_FILE"
 printf '\nUse "Lily Operator" for can0 / hardware.\n'
 printf 'Use "Lily Operator (vcan0)" for virtual-CAN + MCU emulator tests.\n'
 printf 'Use "Lily Operator (Gazebo)" for Gazebo-only /cmdForJetson tests with CAN StateMachine OFF.\n'
-printf 'For simultaneous hardware + Gazebo, start normal "Lily Operator" first, then "Lily Gazebo Sync Bridge".\n'
-printf 'The sync bridge observes already-sent CAN commands through candump and does not change Lily Operator topology.\n'
+printf 'For hardware + Gazebo, start normal "Lily Operator", then "Lily Gazebo Sync Bridge".\n'
+printf 'For vcan0 + Gazebo, start "Lily Operator (vcan0)", then "Lily Gazebo Sync Bridge (vcan0)".\n'
+printf 'The sync bridges observe already-sent CAN commands through candump and do not change Lily Operator topology.\n'
 printf 'If Ubuntu asks whether to trust/launch a desktop file, choose "Trust and Launch".\n'
