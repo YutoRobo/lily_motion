@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function
 
+import argparse
 import collections
+import csv
 import math
 import os
 import sys
@@ -15,10 +17,11 @@ except ImportError:
 
 try:
     import Tkinter as tk
+    import tkFileDialog as filedialog
     import tkMessageBox as messagebox
 except ImportError:
     import tkinter as tk
-    from tkinter import messagebox
+    from tkinter import filedialog, messagebox
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 TOOLS_DIR = os.path.dirname(THIS_DIR)
@@ -37,6 +40,88 @@ ACTIVE_PLOT_REFRESH_SEC = 0.50
 ACTIVE_STATUS_REFRESH_SEC = 0.25
 IDLE_STATUS_REFRESH_SEC = 0.50
 CSV_FLUSH_SEC = 1.0
+CSV_REQUIRED_COLUMNS = (
+    'time_sec', 'axis', 'command_rad', 'actual_rad')
+
+
+def _open_csv_for_read(path):
+    if sys.version_info[0] < 3:
+        return open(path, 'rb')
+    return open(path, 'r', newline='')
+
+
+def read_monitor_csv(path):
+    """Read a Monitor CSV into plot-ready per-axis samples.
+
+    The loader intentionally uses the four canonical wire-independent columns
+    written by the Monitor. error/degree columns are recomputed from command and
+    actual so copied or post-processed CSVs cannot introduce inconsistent plots.
+    """
+    if not path or not os.path.isfile(path):
+        raise ValueError('CSV file does not exist: %s' % path)
+
+    samples = {}
+    total_rows = 0
+    max_time = 0.0
+
+    csv_file = _open_csv_for_read(path)
+    try:
+        reader = csv.DictReader(csv_file)
+        fieldnames = reader.fieldnames or []
+        missing = [name for name in CSV_REQUIRED_COLUMNS
+                   if name not in fieldnames]
+        if missing:
+            raise ValueError(
+                'Unsupported Monitor CSV. Missing column(s): %s' %
+                ', '.join(missing))
+
+        for line_number, row in enumerate(reader, 2):
+            try:
+                axis = int(row['axis'])
+                rel_t = float(row['time_sec'])
+                command = float(row['command_rad'])
+                actual = float(row['actual_rad'])
+            except Exception as exc:
+                raise ValueError(
+                    'Invalid CSV value at line %d: %s' %
+                    (line_number, exc))
+
+            if axis < 0 or axis > 23:
+                raise ValueError(
+                    'Invalid axis at line %d: %d (expected 0..23)' %
+                    (line_number, axis))
+            if (not viewer.is_finite(rel_t) or
+                    not viewer.is_finite(command) or
+                    not viewer.is_finite(actual)):
+                raise ValueError(
+                    'Non-finite CSV value at line %d' % line_number)
+            if rel_t < -0.001:
+                raise ValueError(
+                    'Negative time_sec at line %d: %.9f' %
+                    (line_number, rel_t))
+
+            error = command - actual
+            samples.setdefault(axis, []).append(
+                (max(0.0, rel_t), command, actual, error))
+            total_rows += 1
+            max_time = max(max_time, rel_t)
+    finally:
+        csv_file.close()
+
+    if total_rows <= 0:
+        raise ValueError('Monitor CSV contains no data rows.')
+
+    axes = sorted(samples.keys())
+    for axis in axes:
+        samples[axis].sort(key=lambda item: item[0])
+
+    return {
+        'path': os.path.abspath(path),
+        'axes': axes,
+        'samples': samples,
+        'row_count': total_rows,
+        'duration_sec': max(0.0, max_time),
+    }
 
 
 class EmbeddedViewerHost(tk.Frame):
@@ -67,11 +152,11 @@ class EmbeddedViewerApp(viewer.ViewerApp):
        the next autoscale pass.
     4. Keep the Matplotlib toolbar above the plot so Home/Pan/Zoom stay visible
        even when the integrated window height is limited.
+    5. Offline CSV display never sends CAN and stops the receive-only candump
+       reader after loading, leaving the graph static for analysis.
     """
 
     def __init__(self, root, args, axes):
-        # Acquisition polling stays reasonably quick, but heavy drawing is
-        # throttled independently below.
         args.refresh_hz = 20.0
         viewer.ViewerApp.__init__(self, root, args, axes)
         self._move_toolbar_above_canvas()
@@ -82,16 +167,11 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self._last_csv_flush_wall = 0.0
         self._plot_dirty = False
         self._final_plot_pending = False
+        self.offline_source_path = None
         self._ensure_history_capacity(self.measurement_duration)
 
     def _move_toolbar_above_canvas(self):
-        """Repack the existing Matplotlib toolbar above the canvas.
-
-        The maintained standalone viewer creates the toolbar at the bottom of
-        its graph frame. In the integrated Notebook that bottom edge can fall
-        outside the visible area. Repacking only affects the embedded instance;
-        the standalone viewer source is left unchanged.
-        """
+        """Repack the existing Matplotlib toolbar above the canvas."""
         try:
             canvas_widget = self.canvas.get_tk_widget()
             graph_frame = canvas_widget.master
@@ -109,7 +189,6 @@ class EmbeddedViewerApp(viewer.ViewerApp):
                 widget.pack(side=tk.TOP, fill=tk.X)
             canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         except Exception:
-            # Layout improvement must never prevent telemetry monitoring.
             pass
 
     def _required_history_points(self, duration_sec):
@@ -133,6 +212,7 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         duration = self._validate_duration()
         if duration is None:
             return
+        self.offline_source_path = None
         self._ensure_history_capacity(duration)
         self._last_plot_wall = 0.0
         self._last_status_wall = 0.0
@@ -140,15 +220,11 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self._plot_dirty = True
         self._final_plot_pending = False
         result = viewer.ViewerApp._start_measurement(self)
-        # Clear the previous measurement from the canvas once at START. After
-        # this, live drawing only occurs when new measurement data arrive.
         self._refresh_plot()
         self._plot_dirty = False
         return result
 
     def _finish_measurement(self, reason):
-        # Parent closes CSV and switches measurement_active off. Do not draw
-        # here directly because this may be called while consuming CAN lines.
         result = viewer.ViewerApp._finish_measurement(self, reason)
         self._final_plot_pending = True
         self._plot_dirty = True
@@ -161,12 +237,77 @@ class EmbeddedViewerApp(viewer.ViewerApp):
             self._plot_dirty = True
 
     def _clear_display(self):
-        # Parent clears retained data and requests one refresh. Mark the plot as
-        # clean afterward so idle periodic processing does not redraw it again.
         result = viewer.ViewerApp._clear_display(self)
         self._plot_dirty = False
         self._final_plot_pending = False
+        if self.offline_source_path:
+            self.status_var.set(
+                'OFFLINE CSV cleared - use LOAD CSV or APPLY TARGET for live mode')
         return result
+
+    def load_offline_dataset(self, dataset):
+        """Replace live history with an already parsed Monitor CSV dataset."""
+        if self.measurement_active:
+            viewer.ViewerApp._finish_measurement(
+                self, 'STOPPED for offline CSV load')
+        self._close_csv()
+        self._clear_measurement_data()
+
+        duration = max(float(dataset['duration_sec']), 0.001)
+        self.measurement_duration = duration
+        self.duration_var.set('%.3f' % duration)
+        self._ensure_history_capacity(duration)
+
+        for axis in self.axes_ids:
+            rows = list(dataset['samples'].get(axis, []))
+            required = max(
+                self.samples[axis].maxlen or 0,
+                len(rows) + 1,
+                DEFAULT_HISTORY_POINTS_PER_AXIS)
+            if (self.samples[axis].maxlen or 0) < required:
+                self.samples[axis] = collections.deque(maxlen=required)
+            for row in rows:
+                self.samples[axis].append(row)
+            self.sample_count[axis] = len(rows)
+            self.max_abs_error[axis] = max(
+                [abs(row[3]) for row in rows] or [0.0])
+
+        self.measurement_active = False
+        self.measurement_complete = True
+        self.measurement_t0 = 0.0
+        self.offline_source_path = dataset['path']
+        self._plot_dirty = False
+        self._final_plot_pending = False
+
+        # Offline analysis does not need candump. Stop it immediately so a PC
+        # without a CAN interface does no continuing Monitor work after load.
+        try:
+            self.reader.terminate()
+        except Exception:
+            pass
+        self.stop_event.set()
+
+        try:
+            self.start_button.configure(state=tk.DISABLED)
+            self.stop_button.configure(state=tk.DISABLED)
+            self.duration_entry.configure(state=tk.DISABLED)
+        except Exception:
+            pass
+
+        self._refresh_plot()
+        stats = []
+        for axis in self.axes_ids:
+            stats.append(
+                'axis%d n=%d max|e|=%.4fdeg' % (
+                    axis,
+                    self.sample_count[axis],
+                    math.degrees(self.max_abs_error[axis])))
+        self.status_override = (
+            'OFFLINE CSV - %s | %.3f s | %s' % (
+                os.path.basename(dataset['path']),
+                dataset['duration_sec'],
+                ' | '.join(stats)))
+        self.status_var.set(self.status_override)
 
     def _decimated(self, data):
         count = len(data)
@@ -276,7 +417,6 @@ class EmbeddedViewerApp(viewer.ViewerApp):
             if self.measurement_active:
                 self._consume_can_bounded()
 
-                # Live plot: at most 2 Hz and only when samples actually changed.
                 if (self._plot_dirty and
                         now - self._last_plot_wall >= ACTIVE_PLOT_REFRESH_SEC):
                     self._last_plot_wall = now
@@ -287,11 +427,8 @@ class EmbeddedViewerApp(viewer.ViewerApp):
                     self._last_status_wall = now
                     self._update_status()
             else:
-                # STOP/IDLE: no Matplotlib redraw. Raw candump text is discarded
-                # only to prevent queue growth. This keeps Pan/Zoom stable.
                 self._drain_idle_lines()
 
-                # Draw the final measurement exactly once after STOP/COMPLETE.
                 if self._final_plot_pending:
                     self._refresh_plot()
                     self._plot_dirty = False
@@ -343,11 +480,15 @@ class PositionMonitorPanel(object):
 
         self.apply_button = tk.Button(
             selector, text='APPLY TARGET', command=self.apply_target)
-        self.apply_button.pack(side=tk.LEFT, padx=(0, 12))
+        self.apply_button.pack(side=tk.LEFT, padx=(0, 6))
+
+        self.load_csv_button = tk.Button(
+            selector, text='LOAD CSV...', command=self.load_csv)
+        self.load_csv_button.pack(side=tk.LEFT, padx=(0, 12))
 
         tk.Label(
             selector,
-            text='Receive-only: CAN telemetry 0x500|axis. No CAN frames are sent.',
+            text='Live: receive-only CAN. Offline CSV: no CAN output.',
             fg='#006600').pack(side=tk.LEFT, padx=4)
 
         tk.Label(
@@ -356,7 +497,7 @@ class PositionMonitorPanel(object):
 
         hint = tk.Label(
             self.root,
-            text='After STOP/COMPLETE: use the toolbar above the plots for Pan / Zoom / Home; auto-rescale is paused.',
+            text='After STOP/COMPLETE or LOAD CSV: use the toolbar above the plots for Pan / Zoom / Home.',
             anchor='w', fg='#444444')
         hint.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 2))
 
@@ -370,24 +511,76 @@ class PositionMonitorPanel(object):
         args.axes = ''
         return args
 
-    def _create_viewer(self, leg_index):
+    def _mount_viewer(self, args, axes):
         self._destroy_viewer()
-
-        args = self._viewer_args(leg_index)
-        axes = viewer.resolve_axes(args)
-
         host = EmbeddedViewerHost(self.viewer_container)
         host.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         app = EmbeddedViewerApp(host, args, axes)
-
         self.viewer_host = host
         self.viewer_app = app
+        return app
+
+    def _create_viewer(self, leg_index):
+        args = self._viewer_args(leg_index)
+        axes = viewer.resolve_axes(args)
+        app = self._mount_viewer(args, axes)
         self.target_status_var.set(
-            'Leg %d | axes %s | %s | history %d pts/axis' % (
+            'LIVE | Leg %d | axes %s | %s | history %d pts/axis' % (
                 leg_index + 1,
                 ','.join(str(axis) for axis in axes),
                 self.can_interface,
                 app.history_points_per_axis))
+
+    def _create_offline_viewer(self, dataset):
+        axes = list(dataset['axes'])
+        leg_index = max(0, min(7, axes[0] // 3))
+        args = self._viewer_args(leg_index)
+        args.axes = ','.join(str(axis) for axis in axes)
+        args.no_csv = True
+        args.csv = ''
+        args.duration_sec = max(dataset['duration_sec'], 0.001)
+        args.window_sec = max(args.window_sec, args.duration_sec)
+        app = self._mount_viewer(args, axes)
+        app.load_offline_dataset(dataset)
+
+        if (len(axes) == 3 and
+                axes[0] % 3 == 0 and
+                axes == list(range(axes[0], axes[0] + 3))):
+            self.leg_var.set(str(axes[0] // 3 + 1))
+
+        self.target_status_var.set(
+            'OFFLINE | %s | axes %s | rows %d' % (
+                os.path.basename(dataset['path']),
+                ','.join(str(axis) for axis in axes),
+                dataset['row_count']))
+
+    def load_csv(self):
+        if self.viewer_app is not None and self.viewer_app.measurement_active:
+            messagebox.showwarning(
+                'Measurement active',
+                'Stop the current monitor measurement before loading a CSV.')
+            return
+        path = filedialog.askopenfilename(
+            parent=self.root,
+            title='Load Lily Monitor CSV',
+            filetypes=[('CSV', '*.csv'), ('All files', '*')])
+        if path:
+            self.open_csv_path(path)
+
+    def open_csv_path(self, path):
+        """Load a CSV path without opening a dialog; useful for offline launch."""
+        if self.viewer_app is not None and self.viewer_app.measurement_active:
+            raise ValueError(
+                'Stop the current monitor measurement before loading a CSV.')
+        try:
+            dataset = read_monitor_csv(path)
+            self._create_offline_viewer(dataset)
+        except Exception as exc:
+            messagebox.showerror(
+                'LOAD CSV failed',
+                'Could not load Monitor CSV:\n%s\n\n%s' % (path, exc))
+            return False
+        return True
 
     def apply_target(self):
         if self.viewer_app is not None and self.viewer_app.measurement_active:
@@ -440,3 +633,48 @@ class PositionMonitorPanel(object):
 
     def close(self):
         self._destroy_viewer()
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description='Lily Position Monitor / offline Monitor CSV viewer')
+    parser.add_argument(
+        '--csv', default='',
+        help='optional Monitor CSV to open immediately in offline mode')
+    parser.add_argument(
+        '--interface', default='can0',
+        help='live SocketCAN interface when using START (default: can0)')
+    parser.add_argument(
+        '--monitor-leg', type=int, default=4,
+        help='initial one-based live monitor leg 1..8 (default: 4)')
+    args = parser.parse_args(argv)
+
+    if args.monitor_leg < 1 or args.monitor_leg > 8:
+        raise SystemExit('--monitor-leg must be in 1..8')
+
+    root = tk.Tk()
+    root.title('Lily Position Monitor')
+    try:
+        root.geometry('1200x900')
+    except Exception:
+        pass
+
+    panel = PositionMonitorPanel(
+        root,
+        can_interface=args.interface,
+        default_leg_index=args.monitor_leg - 1)
+
+    if args.csv:
+        root.after(50, lambda: panel.open_csv_path(args.csv))
+
+    def close_handler():
+        panel.close()
+        root.destroy()
+
+    root.protocol('WM_DELETE_WINDOW', close_handler)
+    root.mainloop()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
