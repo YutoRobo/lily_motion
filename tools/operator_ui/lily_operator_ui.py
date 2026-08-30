@@ -35,7 +35,7 @@ for path in (ROOT, THIS_DIR, INIT_UI_DIR):
 import ui as legacy_ui
 from motion_stream import MotionStreamError, continuity, load_motion_stream
 
-DEFAULT_RESAMPLE_FACTOR = 2
+DEFAULT_RESAMPLE_FACTOR = 5
 DEFAULT_RATE_HZ = 10.0
 POSITION_LENGTH = 24
 
