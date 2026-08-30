@@ -34,6 +34,10 @@ for path in (ROOT, THIS_DIR, INIT_UI_DIR):
 
 import ui as legacy_ui
 from motion_stream import MotionStreamError, continuity, load_motion_stream
+from motion_topology import (
+    check_subscriber_topology,
+    connection_count_candidate_ok,
+)
 
 DEFAULT_RESAMPLE_FACTOR = 5
 DEFAULT_RATE_HZ = 10.0
@@ -299,6 +303,10 @@ class MotionPanel(object):
         except Exception as exc:
             return None, None, str(exc)
 
+    def _subscriber_topology_ok(self, subscribers):
+        return check_subscriber_topology(
+            rospy.get_name(), subscribers, int(self.pub.get_num_connections()))
+
     def _can_send(self):
         if self.sending or self.loaded is None:
             return False
@@ -311,7 +319,8 @@ class MotionPanel(object):
         current_path = self.path_var.get().strip()
         if not current_path or os.path.abspath(current_path) != self.loaded['path']:
             return False
-        if int(self.pub.get_num_connections()) != 1:
+        if not connection_count_candidate_ok(
+                rospy.get_name(), int(self.pub.get_num_connections())):
             return False
         try:
             current_rf = self._parse_resample_factor()
@@ -325,8 +334,8 @@ class MotionPanel(object):
             messagebox.showerror(
                 'SEND rejected',
                 'SEND requires: RUN on every Use axis, a checked JSONL, '
-                'continuity PASS, unchanged file/resample settings, exactly one '
-                '/cmdForJetson subscriber, and no other UI motion.')
+                'continuity PASS, unchanged file/resample settings, an approved '
+                '/cmdForJetson subscriber topology, and no other UI motion.')
             return
         try:
             rate_hz = self._parse_rate()
@@ -345,11 +354,13 @@ class MotionPanel(object):
                 'SEND rejected',
                 'Another /cmdForJetson publisher is active: %s' % ', '.join(others))
             return
-        if len(subscribers) != 1 or int(self.pub.get_num_connections()) != 1:
+        topology_ok, topology_reason = self._subscriber_topology_ok(subscribers)
+        if not topology_ok:
             messagebox.showerror(
                 'SEND rejected',
-                '/cmdForJetson must have exactly one subscriber. Found: %s' %
-                (', '.join(subscribers) if subscribers else 'none'))
+                '/cmdForJetson subscriber topology is not approved: %s | Found: %s' % (
+                    topology_reason,
+                    ', '.join(subscribers) if subscribers else 'none'))
             return
 
         loaded = self.loaded
@@ -468,11 +479,14 @@ class MotionPanel(object):
                         'another /cmdForJetson publisher appeared: %s' %
                         ', '.join(others))
                     self.send_abort_event.set()
-                elif len(subscribers) != 1 or int(self.pub.get_num_connections()) != 1:
-                    self.abort_reason = (
-                        '/cmdForJetson subscriber count changed: %s' %
-                        (', '.join(subscribers) if subscribers else 'none'))
-                    self.send_abort_event.set()
+                else:
+                    topology_ok, topology_reason = self._subscriber_topology_ok(subscribers)
+                    if not topology_ok:
+                        self.abort_reason = (
+                            '/cmdForJetson subscriber topology changed: %s | found: %s' % (
+                                topology_reason,
+                                ', '.join(subscribers) if subscribers else 'none'))
+                        self.send_abort_event.set()
 
         if self.was_run_ready and not run_ready and not self.sending:
             self.last_sent_position = None
