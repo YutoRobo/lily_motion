@@ -1,6 +1,6 @@
 # Lily Operator desktop launcher
 
-The desktop launchers provide three intentionally separated operating modes without changing the CAN protocol or MCU firmware.
+The desktop launchers provide intentionally separated operating modes without changing the CAN protocol or MCU firmware.
 
 ## One-time installation
 
@@ -12,11 +12,12 @@ git pull
 bash tools/operator_ui/install_desktop_launcher.sh
 ```
 
-This installs three launch modes on the Desktop and in the application menu:
+This installs four launch entries on the Desktop and in the application menu:
 
 - `Lily Operator` — physical CAN (`can0`) for hardware operation;
 - `Lily Operator (vcan0)` — virtual CAN + MCU emulator for PC-side software testing;
-- `Lily Operator (Gazebo)` — Gazebo motion path with CAN StateMachine disabled.
+- `Lily Operator (Gazebo)` — Gazebo-only motion path with CAN StateMachine disabled;
+- `Lily Gazebo Sync Bridge` — external receive-only bridge used **together with the normal physical Lily Operator** to mirror commands already sent on CAN into Gazebo.
 
 On some Ubuntu 18.04 desktops, the first double-click may ask whether the desktop file should be trusted. Choose `Trust and Launch`.
 
@@ -61,11 +62,11 @@ sudo ip link set vcan0 up
 
 The same integrated Operator UI opens with `--can-channel vcan0`. A vcan interface by itself does not emulate MCU behavior; ALIGN/HOME/RUN acknowledgements, telemetry, Config responses, and other MCU-originated frames require the MCU emulator.
 
-## Gazebo use
+## Gazebo-only use
 
 Double-click `Lily Operator (Gazebo)`.
 
-Gazebo mode deliberately does **not** create a CAN bus or a CAN StateMachine. It uses the existing shared command boundary:
+Gazebo-only mode deliberately does **not** create a CAN bus or a CAN StateMachine. It uses the shared command boundary:
 
 ```text
 JSONL Motion UI
@@ -79,28 +80,54 @@ tools/gazebo/mcu_position_interpolator_node.py
 Lily Gazebo model
 ```
 
-The Gazebo launcher:
+The existing Motion safety topology check remains active. `/cmdForJetson` must have the intended single consumer for this mode.
 
-1. sources ROS/catkin;
-2. starts `roscore` only when needed;
-3. reuses an already-running `/lily_gazebo_mcu_position_interpolator` node, or starts one automatically;
-4. opens `tools/operator_ui/lily_operator_gazebo.py`, which contains the existing MotionPanel but no CAN StateMachine or hardware controls;
-5. stops the Gazebo MCU interpolator on exit only when that interpolator was started by this launcher.
+## Simultaneous hardware + Gazebo synchronization
 
-The Gazebo model and its joint controllers are still external to this repository and must already be running through the existing Gazebo environment.
-
-The existing Motion safety topology check remains active. `/cmdForJetson` must have the intended single consumer for this mode. If a hardware/vcan integrated Operator is simultaneously connected to the same ROS master, SEND is rejected rather than broadcasting to both CAN and Gazebo.
-
-Default Gazebo interpolation settings are:
+For synchronization, do **not** use `Lily Operator (Gazebo)`. Use the normal physical `Lily Operator` and the external `Lily Gazebo Sync Bridge`.
 
 ```text
-LILY_GAZEBO_INTERP_DURATION = 0.100 s
-LILY_GAZEBO_UPDATE_PERIOD   = 0.002 s
+normal Lily Operator Motion
+        ↓
+/cmdForJetson
+        ↓
+existing StateMachine
+        ↓
+CAN 0x400+axis
+        ├────────→ real MCU
+        └→ candump receive-only
+               ↓
+        CAN->Gazebo sync bridge
+               ↓
+        Gazebo joint controllers
 ```
 
-These can be overridden before a terminal launch if needed.
+The sync bridge is intentionally outside Lily Operator. It does not modify or replace:
 
-## Mode separation
+- `lily_operator_integrated.py`;
+- MotionPanel;
+- StateMachine;
+- the CAN protocol;
+- MCU firmware/config behavior.
+
+It also does **not** subscribe to `/cmdForJetson`, so the existing Motion `exactly one subscriber` protection remains unchanged.
+
+Recommended startup order:
+
+1. Start Gazebo + Lily model + joint controllers.
+2. Double-click `Lily Operator` and operate the real hardware normally through ALIGN / HOME / RUN.
+3. Double-click `Lily Gazebo Sync Bridge`.
+4. LOAD / CHECK and SEND from the normal Lily Operator.
+
+The sync launcher refuses to start if the normal `/lily_operator` is not running or if the Gazebo-only `/lily_gazebo_mcu_position_interpolator` is still running.
+
+Detailed procedure and architecture are in:
+
+```text
+tools/gazebo/CAN_GAZEBO_SYNC.md
+```
+
+## Mode summary
 
 ```text
 Lily Operator
@@ -111,9 +138,11 @@ Lily Operator (vcan0)
 
 Lily Operator (Gazebo)
   /cmdForJetson -> Gazebo MCU interpolator -> Gazebo joint controllers
-```
 
-The separation is intentional: the physical/vcan StateMachine path and Gazebo consumer are not connected to `/cmdForJetson` at the same time.
+Lily Operator + Lily Gazebo Sync Bridge
+  /cmdForJetson -> existing CAN StateMachine -> can0 -> MCU
+                                           └-> receive-only CAN mirror -> Gazebo
+```
 
 ## PC and Jetson
 
@@ -133,7 +162,13 @@ Launcher output is written under:
 runtime_logs/operator_ui/launcher/
 ```
 
-The Gazebo launcher uses `gazebo_launcher_*.log`; the physical/vcan launcher uses `launcher_*.log`.
+Relevant log patterns:
+
+```text
+launcher_*.log                 physical/vcan Operator
+gazebo_launcher_*.log          Gazebo-only Operator
+gazebo_sync_bridge_*.log       hardware + Gazebo sync bridge
+```
 
 ## Environment overrides
 
@@ -147,9 +182,15 @@ LILY_CATKIN_SETUP    default: ~/catkin_ws/devel/setup.bash
 LILY_OPERATOR_LOG_ROOT
 ```
 
-Gazebo launcher additionally accepts:
+Gazebo output parameters used by Gazebo-only and sync paths:
 
 ```text
-LILY_GAZEBO_INTERP_DURATION   default: 0.100
-LILY_GAZEBO_UPDATE_PERIOD     default: 0.002
+LILY_GAZEBO_INTERP_DURATION    default: 0.100
+LILY_GAZEBO_UPDATE_PERIOD      default: 0.002
+```
+
+Sync bridge additionally accepts:
+
+```text
+LILY_GAZEBO_CAN_COALESCE_SEC   default: 0.002
 ```
