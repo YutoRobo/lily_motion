@@ -1,6 +1,6 @@
 # Lily Operator desktop launcher
 
-The desktop launcher starts the existing integrated Operator UI without changing the StateMachine, CAN protocol, MCU firmware, or motion logic.
+The desktop launchers provide three intentionally separated operating modes without changing the CAN protocol or MCU firmware.
 
 ## One-time installation
 
@@ -12,10 +12,11 @@ git pull
 bash tools/operator_ui/install_desktop_launcher.sh
 ```
 
-This installs two launch modes on the Desktop and in the application menu:
+This installs three launch modes on the Desktop and in the application menu:
 
 - `Lily Operator` — physical CAN (`can0`) for hardware operation;
-- `Lily Operator (vcan0)` — virtual CAN for PC-side software testing.
+- `Lily Operator (vcan0)` — virtual CAN + MCU emulator for PC-side software testing;
+- `Lily Operator (Gazebo)` — Gazebo motion path with CAN StateMachine disabled.
 
 On some Ubuntu 18.04 desktops, the first double-click may ask whether the desktop file should be trusted. Choose `Trust and Launch`.
 
@@ -44,8 +45,6 @@ sudo ip link set can0 type can bitrate 500000
 sudo ip link set can0 up
 ```
 
-If the correct bitrate is already configured and only the interface is down, it only brings `can0` up.
-
 ## Virtual CAN use
 
 Double-click `Lily Operator (vcan0)`.
@@ -60,27 +59,71 @@ sudo ip link add dev vcan0 type vcan
 sudo ip link set vcan0 up
 ```
 
-The same integrated Operator UI then opens with `--can-channel vcan0`.
+The same integrated Operator UI opens with `--can-channel vcan0`. A vcan interface by itself does not emulate MCU behavior; ALIGN/HOME/RUN acknowledgements, telemetry, Config responses, and other MCU-originated frames require the MCU emulator.
 
-`vcan0` is useful for checking UI behavior, CAN transmit traffic, ROS/Motion paths, and software-side integration without a physical CAN adapter. A vcan interface by itself does not emulate MCU behavior: ALIGN/HOME/RUN acknowledgements, telemetry, Config responses, and other MCU-originated frames require a separate simulator or test process if those state transitions need to be exercised.
+## Gazebo use
+
+Double-click `Lily Operator (Gazebo)`.
+
+Gazebo mode deliberately does **not** create a CAN bus or a CAN StateMachine. It uses the existing shared command boundary:
+
+```text
+JSONL Motion UI
+    ↓
+/cmdForJetson
+    ↓
+tools/gazebo/mcu_position_interpolator_node.py
+    ↓
+24 Gazebo joint controller topics
+    ↓
+Lily Gazebo model
+```
+
+The Gazebo launcher:
+
+1. sources ROS/catkin;
+2. starts `roscore` only when needed;
+3. reuses an already-running `/lily_gazebo_mcu_position_interpolator` node, or starts one automatically;
+4. opens `tools/operator_ui/lily_operator_gazebo.py`, which contains the existing MotionPanel but no CAN StateMachine or hardware controls;
+5. stops the Gazebo MCU interpolator on exit only when that interpolator was started by this launcher.
+
+The Gazebo model and its joint controllers are still external to this repository and must already be running through the existing Gazebo environment.
+
+The existing Motion safety topology check remains active. `/cmdForJetson` must have the intended single consumer for this mode. If a hardware/vcan integrated Operator is simultaneously connected to the same ROS master, SEND is rejected rather than broadcasting to both CAN and Gazebo.
+
+Default Gazebo interpolation settings are:
+
+```text
+LILY_GAZEBO_INTERP_DURATION = 0.100 s
+LILY_GAZEBO_UPDATE_PERIOD   = 0.002 s
+```
+
+These can be overridden before a terminal launch if needed.
+
+## Mode separation
+
+```text
+Lily Operator
+  /cmdForJetson -> CAN StateMachine -> can0 -> MCU
+
+Lily Operator (vcan0)
+  /cmdForJetson -> CAN StateMachine -> vcan0 -> MCU emulator
+
+Lily Operator (Gazebo)
+  /cmdForJetson -> Gazebo MCU interpolator -> Gazebo joint controllers
+```
+
+The separation is intentional: the physical/vcan StateMachine path and Gazebo consumer are not connected to `/cmdForJetson` at the same time.
 
 ## PC and Jetson
 
-The launcher is a Bash script, not a compiled x86_64 or ARM binary. Therefore the same launcher files can be used on both an x86_64 desktop PC and an aarch64 Jetson, provided the required local environment exists:
+The launchers are Bash scripts, not compiled x86_64 or ARM binaries. The same files can therefore be used on an x86_64 desktop PC and an aarch64 Jetson when the required local Python/ROS environment exists.
 
-- Ubuntu / compatible desktop environment;
-- ROS Melodic;
-- Python 2;
-- `can-utils` / SocketCAN tools;
-- the Lily Python dependencies already used by the Operator UI.
-
-You can confirm the CPU architecture with:
+You can confirm architecture with:
 
 ```bash
 uname -m
 ```
-
-The Python/ROS packages are still the packages installed locally on each machine.
 
 ## Logs
 
@@ -90,13 +133,11 @@ Launcher output is written under:
 runtime_logs/operator_ui/launcher/
 ```
 
-The log records the requested CAN interface and whether the launcher selected physical CAN or virtual CAN mode.
-
-If startup fails, the error dialog includes the relevant launcher log path when possible.
+The Gazebo launcher uses `gazebo_launcher_*.log`; the physical/vcan launcher uses `launcher_*.log`.
 
 ## Environment overrides
 
-Defaults can be overridden before launching if needed:
+Physical/vcan launcher:
 
 ```text
 LILY_CAN_CHANNEL     default: can0
@@ -106,8 +147,9 @@ LILY_CATKIN_SETUP    default: ~/catkin_ws/devel/setup.bash
 LILY_OPERATOR_LOG_ROOT
 ```
 
-Any channel whose name starts with `vcan` is treated as a virtual-CAN request. For example, a terminal launch can use:
+Gazebo launcher additionally accepts:
 
-```bash
-LILY_CAN_CHANNEL=vcan1 bash tools/operator_ui/launch_lily_operator.sh
+```text
+LILY_GAZEBO_INTERP_DURATION   default: 0.100
+LILY_GAZEBO_UPDATE_PERIOD     default: 0.002
 ```
