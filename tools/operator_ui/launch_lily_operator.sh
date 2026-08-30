@@ -94,26 +94,60 @@ configure_can() {
   log "$CAN_IF configured successfully"
 }
 
+source_setup_file() {
+  local setup_file="$1"
+  local label="$2"
+  local rc
+
+  log "Loading $label: $setup_file"
+
+  # ROS/catkin setup scripts are not guaranteed to be compatible with
+  # `set -u` (nounset). Temporarily disable it while sourcing them, then
+  # restore the launcher's stricter mode afterward.
+  set +u
+  # shellcheck disable=SC1090
+  source "$setup_file"
+  rc=$?
+  set -u
+
+  if [ "$rc" -ne 0 ]; then
+    show_error "Failed to load $label: $setup_file"
+    return "$rc"
+  fi
+
+  log "Loaded $label: $setup_file"
+  return 0
+}
+
 setup_ros_environment() {
   if [ ! -f "$ROS_SETUP" ]; then
     show_error "ROS setup file was not found: $ROS_SETUP"
     return 1
   fi
-  # shellcheck disable=SC1090
-  source "$ROS_SETUP"
-  log "Loaded ROS environment: $ROS_SETUP"
+  source_setup_file "$ROS_SETUP" "ROS environment" || return 1
 
   if [ -f "$CATKIN_SETUP" ]; then
-    # shellcheck disable=SC1090
-    source "$CATKIN_SETUP"
-    log "Loaded catkin workspace: $CATKIN_SETUP"
+    source_setup_file "$CATKIN_SETUP" "catkin workspace" || return 1
   else
     log "Catkin setup not found; continuing without it: $CATKIN_SETUP"
   fi
 }
 
+ros_master_available() {
+  if ! command -v rosparam >/dev/null 2>&1; then
+    return 1
+  fi
+
+  # Do not let an unreachable/stale ROS_MASTER_URI stall desktop startup.
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 1 rosparam list >/dev/null 2>&1
+  else
+    rosparam list >/dev/null 2>&1
+  fi
+}
+
 ensure_roscore() {
-  if command -v rosparam >/dev/null 2>&1 && rosparam list >/dev/null 2>&1; then
+  if ros_master_available; then
     log "ROS master already available at ${ROS_MASTER_URI:-default}"
     return 0
   fi
@@ -130,7 +164,7 @@ ensure_roscore() {
 
   local i
   for i in $(seq 1 30); do
-    if rosparam list >/dev/null 2>&1; then
+    if ros_master_available; then
       log "roscore ready (pid=$ROSCORE_PID)"
       return 0
     fi
