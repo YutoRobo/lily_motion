@@ -1,0 +1,199 @@
+# Lily Operator UI v0
+
+This branch-only UI keeps the maintained CAN StateMachine behavior while integrating the operator-facing controls into one window.
+
+## Preferred start: integrated Operator UI
+
+The integrated launcher owns the existing StateMachine, CAN connection, Control UI, JSONL Motion panel, receive-only position Monitor, and MCU Config panel:
+
+```bash
+source /opt/ros/melodic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+python2 tools/operator_ui/lily_operator_integrated.py \
+  --can-interface socketcan \
+  --can-channel can0 \
+  --can-bitrate 500000
+```
+
+Do **not** start `tools/can_interface/statemachine/main.py` in another terminal when using the integrated launcher.
+
+Optional initial Monitor target:
+
+```bash
+python2 tools/operator_ui/lily_operator_integrated.py --monitor-leg 4
+```
+
+`--monitor-leg` is one-based (`1..8`) and can also be changed from the Monitor tab after startup.
+
+For a single unloaded test axis, the MCU Config tab can be limited to that axis, for example:
+
+```bash
+python2 tools/operator_ui/lily_operator_integrated.py --config-axes 11
+```
+
+Accepted examples are `--config-axes 0-23`, `--config-axes 11`, and `--config-axes 9-11`.
+
+## Window layout
+
+```text
+Lily Operator | CAN / online-axis / RUN status                         [STOP]
+----------------------------------------------------------------------------
+[ Control ] [ Motion ] [ Monitor ] [ MCU Config ]
+```
+
+- **Control**: maintained Use / ALIGN / HOME / RUN controls.
+- **Motion**: one JSONL at a time, `LOAD / CHECK -> SEND`.
+- **Monitor**: embedded maintained MCU position-debug viewer.
+- **MCU Config**: READ / WRITE / SAVE / Echo for HardwareConfig and SoftwareConfig.
+- **STOP**: remains visible above the tabs at all times.
+
+## MCU Config tab
+
+The Config tab reuses the maintained protocol implementation from `tools/mcu_config/lily_mcu_config_editor.py` rather than defining another CAN protocol.
+
+Protocol remains:
+
+```text
+Request ID  = 0x080 | axis
+Response ID = 0x180 | axis
+READ  = 0x01
+WRITE = 0x02
+SAVE  = 0x03
+HW    = 0x01
+SW    = 0x02
+```
+
+The integrated panel provides:
+
+- selected-axis READ;
+- all-config-axis READ / discovery;
+- HardwareConfig and SoftwareConfig parameter display;
+- WRITE to RAM;
+- response Echo plus READ-back verification;
+- HardwareConfig SAVE;
+- SoftwareConfig SAVE;
+- HardwareConfig reboot-required indication.
+
+Operator-side safety rules:
+
+- READ is allowed while RUN is active;
+- WRITE and SAVE are disabled while RUN is active;
+- WRITE and SAVE are disabled while JSONL Motion SEND is active;
+- while a Config WRITE/SAVE transaction is in flight, Use / ALIGN / HOME / RUN controls are temporarily interlocked;
+- the MCU remains the final authority and may return `INVALID_STATE` or another protocol error;
+- HardwareConfig SAVE still requires power cycling before the normal ALIGN workflow.
+
+The maintained standalone Config Editor remains available for diagnosis and comparison.
+
+## Monitor tab
+
+The Monitor tab reuses the maintained `tools/diagnostics/realtime_position_debug_viewer_ui.py` implementation rather than duplicating its parser, CSV, or plotting logic.
+
+Controls include:
+
+- target Leg `1..8`;
+- `APPLY TARGET` to rebuild the monitor for that leg's three axes;
+- measurement Duration;
+- `START / STOP / CLEAR`;
+- command / actual plots for the selected three axes;
+- tracking-error plot;
+- CSV logging behavior from the standalone viewer.
+
+Changing the target leg is rejected while a monitor measurement is active. Stop the monitor measurement first, then apply the new target.
+
+The embedded monitor uses the same telemetry definition as the standalone viewer:
+
+```text
+CAN ID   = 0x500 | axis
+byte 0-3 = internal position command [rad], float32 little-endian
+byte 4-7 = actual position [rad], float32 little-endian
+```
+
+The embedded Monitor retains a long sample history while limiting plot redraw work so that the shared Operator UI loop is not dominated by Matplotlib.
+
+The standalone viewer remains available for diagnosis, but it is no longer required for normal Operator UI use.
+
+## Normal multi-file motion flow
+
+The intended workflow is one RUN session with one explicitly selected JSONL at a time:
+
+```text
+ALIGN
+-> HOME
+-> RUN
+-> select air-entry JSONL
+-> LOAD / CHECK
+-> SEND
+-> final air-entry posture is held while RUN remains active
+-> inspect / controlled touchdown
+-> select roll JSONL
+-> LOAD / CHECK
+-> SEND
+-> inspect
+```
+
+Do not press STOP between normal consecutive files. STOP remains an abnormal/emergency operation.
+
+## LOAD / CHECK
+
+LOAD never publishes a position command. It:
+
+- builds the exact transport stream using the existing `prepare_transport_stream()` path;
+- checks all transport frames are 24-axis, finite, and inside the same documented joint limits;
+- rejects a transport frame-to-frame jump of 4 deg or larger;
+- computes the transport SHA256;
+- keeps the checked transport stream in memory so SEND does not re-read the file;
+- checks the loaded first command against the current Operator UI continuity reference.
+
+For the first UI-managed motion in a RUN session, the continuity reference is HOME logical zero. After a successful SEND, the actual last published UI command becomes the reference for the next JSONL. When the RUN session is ended and axes return from Running, the reference resets to HOME zero.
+
+Changing the file path or resample factor after LOAD disables SEND until LOAD / CHECK is performed again. This prevents the selected-file display from drifting away from the checked in-memory stream.
+
+## SEND interlocks
+
+SEND is enabled only when:
+
+- a JSONL has passed LOAD / CHECK;
+- every `Use=True` axis is shown as `Running`;
+- the boundary to the loaded first command is below 4 deg;
+- the file path and resample factor still match the checked stream;
+- the legacy RUN motion check is not active;
+- no Operator JSONL SEND is already active;
+- `/cmdForJetson` has exactly one subscriber;
+- no other ROS node is publishing `/cmdForJetson`.
+
+Publisher/subscriber topology is rechecked while SEND is active. If RUN is lost, another `/cmdForJetson` publisher appears, or the subscriber topology changes, the Operator UI stops publishing the remaining frames.
+
+While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available.
+
+## Current motion defaults
+
+The UI starts with the committed pre-hardware transport defaults:
+
+- resample factor: `2`
+- rate: `10 Hz`
+
+Changing the resample factor after LOAD requires another LOAD / CHECK. Rate is validated again at SEND time.
+
+## Tests
+
+The branch includes a pure JSONL/transport test that does not require Tkinter or CAN:
+
+```bash
+python2 tests/test_operator_motion_stream.py
+```
+
+It checks the HOME -> air-entry boundary, air-entry -> full-roll boundary, the 4 deg continuity rule, and invalid resample rejection.
+
+## Scope of v0
+
+This branch still intentionally does not change:
+
+- the existing CAN StateMachine command IDs or state transitions;
+- MCU firmware;
+- the existing standalone JSONL publisher;
+- staged motion files;
+- the maintained standalone realtime position debug viewer;
+- the maintained standalone MCU Config editor.
+
+The Operator UI integrates the maintained Monitor and MCU Config functionality without removing those standalone diagnostic tools.
