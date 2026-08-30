@@ -8,6 +8,7 @@ import csv
 import math
 import os
 import sys
+import threading
 import time
 
 try:
@@ -153,7 +154,8 @@ class EmbeddedViewerApp(viewer.ViewerApp):
     4. Keep the Matplotlib toolbar above the plot so Home/Pan/Zoom stay visible
        even when the integrated window height is limited.
     5. Offline CSV display never sends CAN and stops the receive-only candump
-       reader after loading, leaving the graph static for analysis.
+       reader. Pressing START restarts candump and begins a fresh live capture
+       for the same axes shown by the CSV.
     """
 
     def __init__(self, root, args, axes):
@@ -208,10 +210,39 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self.history_points_per_axis = max(
             self.samples[axis].maxlen for axis in self.axes_ids)
 
+    def _restart_live_reader(self):
+        """Restart receive-only candump after an offline CSV was displayed."""
+        old_stop_event = self.stop_event
+        try:
+            old_stop_event.set()
+        except Exception:
+            pass
+        try:
+            self.reader.terminate()
+        except Exception:
+            pass
+
+        self.line_queue = queue.Queue()
+        self.stop_event = threading.Event()
+        self.reader = viewer.CandumpReader(
+            self.args.interface, self.line_queue, self.stop_event)
+        self.reader.start()
+        self.last_rx_wall = None
+
     def _start_measurement(self):
         duration = self._validate_duration()
         if duration is None:
             return
+
+        if self.offline_source_path is not None:
+            self._restart_live_reader()
+            try:
+                self.start_button.configure(state=tk.NORMAL)
+                self.stop_button.configure(state=tk.NORMAL)
+                self.duration_entry.configure(state=tk.NORMAL)
+            except Exception:
+                pass
+
         self.offline_source_path = None
         self._ensure_history_capacity(duration)
         self._last_plot_wall = 0.0
@@ -242,7 +273,7 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self._final_plot_pending = False
         if self.offline_source_path:
             self.status_var.set(
-                'OFFLINE CSV cleared - use LOAD CSV or APPLY TARGET for live mode')
+                'OFFLINE CSV cleared - press START for live capture or LOAD CSV')
         return result
 
     def load_offline_dataset(self, dataset):
@@ -279,18 +310,17 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         self._plot_dirty = False
         self._final_plot_pending = False
 
-        # Offline analysis does not need candump. Stop it immediately so a PC
-        # without a CAN interface does no continuing Monitor work after load.
+        # Offline analysis does not need candump. Stop the reader, but keep the
+        # lightweight Tk timer alive so START can restart live acquisition.
         try:
             self.reader.terminate()
         except Exception:
             pass
-        self.stop_event.set()
 
         try:
-            self.start_button.configure(state=tk.DISABLED)
+            self.start_button.configure(state=tk.NORMAL)
             self.stop_button.configure(state=tk.DISABLED)
-            self.duration_entry.configure(state=tk.DISABLED)
+            self.duration_entry.configure(state=tk.NORMAL)
         except Exception:
             pass
 
@@ -303,7 +333,7 @@ class EmbeddedViewerApp(viewer.ViewerApp):
                     self.sample_count[axis],
                     math.degrees(self.max_abs_error[axis])))
         self.status_override = (
-            'OFFLINE CSV - %s | %.3f s | %s' % (
+            'OFFLINE CSV - %s | %.3f s | %s | START = new live capture' % (
                 os.path.basename(dataset['path']),
                 dataset['duration_sec'],
                 ' | '.join(stats)))
@@ -414,6 +444,12 @@ class EmbeddedViewerApp(viewer.ViewerApp):
         try:
             now = time.time()
 
+            if self.offline_source_path is not None:
+                # Offline mode is intentionally static. candump has been stopped;
+                # leave only this lightweight timer so START can resume live mode.
+                self.root.after(self.refresh_ms, self._periodic_update)
+                return
+
             if self.measurement_active:
                 self._consume_can_bounded()
 
@@ -488,7 +524,7 @@ class PositionMonitorPanel(object):
 
         tk.Label(
             selector,
-            text='Live: receive-only CAN. Offline CSV: no CAN output.',
+            text='Live: receive-only CAN. Offline CSV: candump stopped; START resumes live.',
             fg='#006600').pack(side=tk.LEFT, padx=4)
 
         tk.Label(
@@ -497,7 +533,7 @@ class PositionMonitorPanel(object):
 
         hint = tk.Label(
             self.root,
-            text='After STOP/COMPLETE or LOAD CSV: use the toolbar above the plots for Pan / Zoom / Home.',
+            text='After STOP/COMPLETE or LOAD CSV: use the toolbar for Pan / Zoom / Home. In Offline mode, START begins a new live capture.',
             anchor='w', fg='#444444')
         hint.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 2))
 
@@ -536,8 +572,9 @@ class PositionMonitorPanel(object):
         leg_index = max(0, min(7, axes[0] // 3))
         args = self._viewer_args(leg_index)
         args.axes = ','.join(str(axis) for axis in axes)
-        args.no_csv = True
-        args.csv = ''
+        # Preserve the normal CSV output settings. Merely loading an offline CSV
+        # does not open an output file; if START is pressed later, the fresh live
+        # measurement should be logged exactly like an ordinary Monitor run.
         args.duration_sec = max(dataset['duration_sec'], 0.001)
         args.window_sec = max(args.window_sec, args.duration_sec)
         app = self._mount_viewer(args, axes)
@@ -549,7 +586,7 @@ class PositionMonitorPanel(object):
             self.leg_var.set(str(axes[0] // 3 + 1))
 
         self.target_status_var.set(
-            'OFFLINE | %s | axes %s | rows %d' % (
+            'OFFLINE | %s | axes %s | rows %d | START -> LIVE' % (
                 os.path.basename(dataset['path']),
                 ','.join(str(axis) for axis in axes),
                 dataset['row_count']))
