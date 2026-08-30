@@ -105,14 +105,15 @@ The Monitor tab reuses the maintained `tools/diagnostics/realtime_position_debug
 Controls include:
 
 - target Leg `1..8`;
-- `APPLY TARGET` to rebuild the monitor for that leg's three axes;
+- `APPLY TARGET` to rebuild the monitor for that leg's three axes and return to live mode;
+- `LOAD CSV...` to load a previously recorded Monitor CSV in offline mode;
 - measurement Duration;
 - `START / STOP / CLEAR`;
-- command / actual plots for the selected three axes;
+- command / actual plots for the selected axes;
 - tracking-error plot;
 - CSV logging behavior from the standalone viewer.
 
-Changing the target leg is rejected while a monitor measurement is active. Stop the monitor measurement first, then apply the new target.
+Changing the target leg or loading a CSV is rejected while a monitor measurement is active. Stop the monitor measurement first.
 
 The embedded monitor uses the same telemetry definition as the standalone viewer:
 
@@ -124,7 +125,41 @@ byte 4-7 = actual position [rad], float32 little-endian
 
 The embedded Monitor retains a long sample history while limiting plot redraw work so that the shared Operator UI loop is not dominated by Matplotlib.
 
-The standalone viewer remains available for diagnosis, but it is no longer required for normal Operator UI use.
+### Offline CSV exchange
+
+Monitor CSV files can be copied between PCs and reopened with the same command/actual/error plots. The loader reads the axis IDs from the CSV automatically, so the receiving PC does not need to select the original Leg first.
+
+Inside the integrated Operator UI:
+
+```text
+Monitor -> LOAD CSV... -> select position_debug_*.csv
+```
+
+Offline CSV mode is static: it does not send CAN frames and stops the Monitor's receive-only `candump` reader after the file is loaded. Use the Matplotlib toolbar above the plots for `Home / Pan / Zoom`.
+
+For an analysis PC that does not need the integrated StateMachine or ROS UI, the Monitor can also be started directly:
+
+```bash
+python2 tools/operator_ui/position_monitor_panel.py \
+  --csv /path/to/position_debug_leg05_target002.csv
+```
+
+This direct CSV-viewer path does not initialize the Operator StateMachine or ROS. A live CAN connection is not required to inspect an already recorded CSV. `Tkinter` and `Matplotlib` are still required on the analysis PC.
+
+The canonical CSV columns used for loading are:
+
+```text
+time_sec
+axis
+command_rad
+actual_rad
+```
+
+The tracking-error and degree values are recomputed from these columns when the CSV is loaded. The normal Monitor CSV contains these columns plus timestamp and precomputed error/degree columns.
+
+To leave offline mode and return to live monitoring in the integrated UI, choose the target Leg and press `APPLY TARGET`.
+
+The standalone realtime viewer remains available for diagnosis, but it is no longer required for normal Operator UI use.
 
 ## Normal multi-file motion flow
 
