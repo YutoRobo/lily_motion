@@ -1,6 +1,6 @@
 # Lily Operator desktop launcher
 
-The desktop launchers provide three operating modes without changing the CAN protocol or MCU firmware.
+The desktop launchers provide four operating modes without changing the CAN protocol or MCU firmware.
 
 ## One-time installation
 
@@ -14,9 +14,10 @@ bash tools/operator_ui/install_desktop_launcher.sh
 
 This installs:
 
-- `Lily Operator` — physical CAN (`can0`) for hardware operation;
+- `Lily Operator` — physical CAN (`can0`) for hardware operation only;
 - `Lily Operator (vcan0)` — virtual CAN + MCU emulator for PC-side software testing;
-- `Lily Operator (Gazebo)` — Gazebo-only motion path with CAN StateMachine disabled.
+- `Lily Operator (Gazebo)` — Gazebo-only motion path with CAN StateMachine disabled;
+- `Lily Operator (Hardware + Gazebo)` — automatically prepare Gazebo world/controllers/interpolator, then start the unchanged normal physical-CAN Operator.
 
 The installer also removes obsolete desktop entries from the abandoned CAN-to-Gazebo Sync Bridge experiment.
 
@@ -24,16 +25,7 @@ The installer also removes obsolete desktop entries from the abandoned CAN-to-Ga
 
 Double-click `Lily Operator`.
 
-The launcher:
-
-1. finds `can0` (or `LILY_CAN_CHANNEL`);
-2. leaves it unchanged if it is already UP at `500000 bit/s`;
-3. otherwise requests administrator authentication and configures the physical CAN interface;
-4. sources ROS Melodic and the catkin workspace when present;
-5. reuses a reachable ROS master or starts `roscore` when needed;
-6. starts the existing integrated Lily Operator UI.
-
-The hardware command path remains:
+This path is unchanged. The launcher prepares physical CAN, ROS, and starts the existing integrated Operator UI. It does not start Gazebo, Gazebo controllers, or the Gazebo interpolator.
 
 ```text
 Lily Operator Motion
@@ -53,45 +45,49 @@ Double-click `Lily Operator (vcan0)`.
 
 If `vcan0` does not exist, the launcher creates and brings it UP. Virtual CAN has no physical bitrate, so no CAN bitrate is applied to `vcan0`.
 
-The same integrated Operator UI is used; MCU-originated responses still require the separate MCU emulator.
-
 ## Gazebo-only use
 
 Double-click `Lily Operator (Gazebo)`.
 
-This deliberately does not create a CAN StateMachine. It uses:
+This deliberately does not create a CAN StateMachine. It uses the Gazebo-only Motion UI and the existing Gazebo MCU interpolator.
+
+The Gazebo model and joint controllers must already be running for this mode.
+
+## Hardware + Gazebo automatic use
+
+Double-click `Lily Operator (Hardware + Gazebo)`.
+
+The combined launcher is an external wrapper. It does **not** modify or replace the normal `Lily Operator` launcher. Its startup sequence is:
 
 ```text
-Gazebo-only Motion UI
+ROS environment / ROS master
     ↓
-/cmdForJetson
+roslaunch lily_octpus_gazebo lily_octpus_world.launch
+    ↓
+Gazebo readiness check
+    ↓
+configurable settling delay (default 2.0 s)
+    ↓
+roslaunch lily_octpus_control lily_octpus_control.launch
+    ↓
+24 controller command-subscriber readiness check
     ↓
 /lily_gazebo_mcu_position_interpolator
     ↓
-24 Gazebo joint controller topics
-    ↓
-Lily Gazebo model
+unchanged normal Lily Operator launcher
 ```
 
-The Gazebo model and joint controllers must already be running in the existing Gazebo environment.
+Gazebo readiness requires both `/gazebo/model_states` and `/gazebo/get_world_properties` to exist in the ROS graph.
 
-## Hardware + Gazebo synchronized command use
+Controller readiness uses the 24 canonical Gazebo command topics from `lily_motion_v3/interface_config.py`. Before starting the control launch:
 
-For synchronized comparison, use the **normal `Lily Operator`**, not a separate Sync Bridge.
+- 24/24 ready: reuse the existing controller session;
+- 0/24 ready: start `lily_octpus_control.launch`;
+- partial readiness such as 18/24: stop with an error instead of launching duplicate controllers.
 
-Start the existing Gazebo MCU interpolator in the same ROS graph:
+After the control launch, the wrapper waits until all 24 controller command topics have subscribers.
 
-```bash
-source /opt/ros/melodic/setup.bash
-source ~/catkin_ws/devel/setup.bash
-
-python2 tools/gazebo/mcu_position_interpolator_node.py \
-  --input-topic /cmdForJetson \
-  --interp-duration-sec 0.100 \
-  --update-period-sec 0.002
-```
-
-Then one Motion SEND is shared directly:
+The synchronized command path remains:
 
 ```text
                      /cmdForJetson
@@ -109,13 +105,19 @@ The normal Operator safety policy remains restrictive:
 
 - `/lily_operator` StateMachine subscriber is mandatory;
 - `/lily_gazebo_mcu_position_interpolator` is the only optional second subscriber;
-- any unknown `/cmdForJetson` subscriber is rejected;
-- any additional `/cmdForJetson` publisher is rejected;
-- the topology is rechecked while Motion SEND is active and SEND is aborted if it changes to an unapproved topology.
+- unknown `/cmdForJetson` subscribers are rejected;
+- additional `/cmdForJetson` publishers are rejected;
+- topology is rechecked while Motion SEND is active.
 
-Thus hardware-only remains valid with one subscriber, while hardware + Gazebo is valid with the two known subscribers.
+Do not separately open `Lily Operator` before using the combined launcher. The combined launcher refuses to start when `/lily_operator` is already running.
 
-Do not run `Lily Operator (Gazebo)` at the same time as the normal `Lily Operator` for synchronized hardware operation; use the standalone `mcu_position_interpolator_node.py` with the normal Operator instead.
+### Existing process reuse and cleanup
+
+The combined launcher reuses an already-ready ROS master, Gazebo world, all-24-controller session, or Gazebo interpolator when present.
+
+Only processes started by the combined launcher are stopped when its normal Operator session ends. Cleanup is performed in reverse order: interpolator, control roslaunch, world roslaunch, then roscore if this launcher created it. Broad `pkill gazebo`-style cleanup is not used.
+
+If a `/gazebo` node exists but Gazebo readiness is incomplete, or if only part of the 24 controller command topics are ready, startup fails instead of creating a second Gazebo/control session.
 
 ## Logs
 
@@ -123,6 +125,12 @@ Launcher output is written under:
 
 ```text
 runtime_logs/operator_ui/launcher/
+```
+
+The combined launcher log is named:
+
+```text
+hardware_gazebo_launcher_YYYYmmdd_HHMMSS.log
 ```
 
 ## Environment overrides
@@ -137,9 +145,21 @@ LILY_CATKIN_SETUP    default: ~/catkin_ws/devel/setup.bash
 LILY_OPERATOR_LOG_ROOT
 ```
 
-Gazebo-only launcher additionally accepts:
+Gazebo-related launchers:
 
 ```text
-LILY_GAZEBO_INTERP_DURATION   default: 0.100
-LILY_GAZEBO_UPDATE_PERIOD     default: 0.002
+LILY_GAZEBO_INTERP_DURATION       default: 0.100
+LILY_GAZEBO_UPDATE_PERIOD         default: 0.002
+```
+
+Combined Hardware + Gazebo launcher additionally accepts:
+
+```text
+LILY_GAZEBO_WORLD_PACKAGE         default: lily_octpus_gazebo
+LILY_GAZEBO_WORLD_LAUNCH          default: lily_octpus_world.launch
+LILY_GAZEBO_CONTROL_PACKAGE       default: lily_octpus_control
+LILY_GAZEBO_CONTROL_LAUNCH        default: lily_octpus_control.launch
+LILY_GAZEBO_CONTROL_DELAY_SEC     default: 2.0
+LILY_GAZEBO_READY_TIMEOUT_SEC     default: 30.0
+LILY_GAZEBO_CONTROL_TIMEOUT_SEC   default: 30.0
 ```
