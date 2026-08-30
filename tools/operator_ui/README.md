@@ -2,11 +2,13 @@
 
 This branch-only UI keeps the maintained CAN StateMachine behavior while integrating the operator-facing controls into one window.
 
-## Preferred start: integrated Operator UI
+## Quick start
 
-The integrated launcher owns the existing StateMachine, CAN connection, Control UI, JSONL Motion panel, receive-only position Monitor, and MCU Config panel:
+Update the feature branch and launch the integrated Operator UI with:
 
 ```bash
+git checkout feature/operator-ui-v0
+git pull
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
 python2 tools/operator_ui/lily_operator_integrated.py \
@@ -16,6 +18,17 @@ python2 tools/operator_ui/lily_operator_integrated.py \
 ```
 
 Do **not** start `tools/can_interface/statemachine/main.py` in another terminal when using the integrated launcher.
+
+## Preferred start: integrated Operator UI
+
+The integrated launcher owns the existing StateMachine, CAN connection, Control UI, JSONL Motion panel, receive-only position Monitor, and MCU Config panel:
+
+```bash
+python2 tools/operator_ui/lily_operator_integrated.py \
+  --can-interface socketcan \
+  --can-channel can0 \
+  --can-bitrate 500000
+```
 
 Optional initial Monitor target:
 
@@ -168,12 +181,12 @@ While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and lega
 
 ## Current motion defaults
 
-The UI starts with the committed pre-hardware transport defaults:
+The UI starts with:
 
-- resample factor: `2`
+- resample factor: `5`
 - rate: `10 Hz`
 
-Changing the resample factor after LOAD requires another LOAD / CHECK. Rate is validated again at SEND time.
+This corresponds to the current operator baseline of RF5 / 10 Hz. Changing the resample factor after LOAD requires another LOAD / CHECK. Rate is validated again at SEND time.
 
 ## Tests
 
