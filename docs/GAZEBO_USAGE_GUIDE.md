@@ -1,109 +1,145 @@
 # Lily Gazebo Usage Guide
 
-更新日: 2026-08-23  
-対象: `master`
+更新日: 2026-08-30  
+対象: `feature/monitor-csv-load`
 
-この文書は、**LilyをGazeboで確認するときの入口と実行手順の正本**である。
+この文書は、LilyをGazeboで確認するときの現行手順をまとめる。
 
 すべての `tools/...`、`data/...` pathは `lily_motion/` repository root基準。
 
 ---
 
-## 1. まず知っておくこと
+## 1. 共通command境界
 
-現行のGazebo確認は、実機と同じ上流command pathを使う。
+Gazeboと実機は、上流の24軸command境界 `/cmdForJetson` を共有する。
+
+実機:
 
 ```text
-staged JSONL
-    ↓
-tools/publish_cmdforjetson_jsonl.py
+JSONL / Lily Operator Motion
     ↓
 /cmdForJetson
     ↓
-tools/gazebo/mcu_position_interpolator_node.py
+/lily_operator StateMachine
     ↓
-Gazebo joint controller topics
+CAN
+    ↓
+MCU / hardware
+```
+
+Gazebo:
+
+```text
+JSONL / Motion publisher
+    ↓
+/cmdForJetson
+    ↓
+/lily_gazebo_mcu_position_interpolator
+    ↓
+24 Gazebo joint controller topics
     ↓
 Lily model
 ```
 
-実機では `/cmdForJetson` の下流がCAN StateMachineになる。
-
-```text
-REAL:
-/cmdForJetson → CAN StateMachine → CAN → MCU
-
-GAZEBO:
-/cmdForJetson → Gazebo MCU interpolator → Gazebo
-```
-
-したがって、**同じJSONL / 同じJetson transport target列を実機とGazeboで比較できる**。
+`tools/gazebo/mcu_position_interpolator_node.py` が `/cmdForJetson` の24要素を受け、MCU相当の位置補間を行ってGazeboの各joint controller topicへ分配する。
 
 ---
 
-## 2. このrepositoryだけでは起動しないもの
+## 2. Gazebo単独確認
 
-現在の `tools/gazebo/` には次のPython toolsがある。
-
-```text
-mcu_position_interpolator_node.py
-run_v3_0_gazebo_replay.py
-run_v3_0_gazebo_touchdown_pose_check.py
-```
-
-一方、現行repositoryにはLily本体・Gazebo world・joint controllerを起動するlaunch fileは確認できない。
-
-そのため、このガイドは次が**既に起動できる環境**から開始する。
+Gazebo単独では `Lily Operator (Gazebo)` を使用できる。
 
 ```text
+Lily Operator (Gazebo)
+    ↓
+/cmdForJetson
+    ↓
+Gazebo MCU interpolator
+    ↓
 Gazebo
-+ Lily robot model
-+ Lily joint controllers
 ```
 
-この外部Gazebo環境の起動方法は、現時点では本repositoryの正本化対象外。
+このモードではCAN StateMachineを起動しない。
+
+Gazebo model / world / joint controllersは既存のGazebo環境側で先に起動しておく。
 
 ---
 
-## 3. Gazeboで起動してはいけないもの
+## 3. 実機 + Gazebo同期確認
 
-Gazebo確認時はCAN StateMachineを `/cmdForJetson` に接続しない。
+実機とGazeboを同じcommandで動かす場合、CANを後段でコピーするSync Bridgeは使用しない。
 
-```text
-Gazebo trial
-  mcu_position_interpolator_node.py : ON
-  CAN StateMachine                  : OFF
-```
-
-実機trialでは逆。
+通常の `Lily Operator` と既存Gazebo MCU interpolatorを同一ROS master上で使用する。
 
 ```text
-Real hardware trial
-  CAN StateMachine                  : ON
-  Gazebo MCU interpolator           : OFF
+                         Lily Operator Motion
+                                  ↓
+                            /cmdForJetson
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ↓                           ↓
+          /lily_operator StateMachine   Gazebo MCU interpolator
+                    ↓                           ↓
+                   CAN                 24 joint controller topics
+                    ↓                           ↓
+                  実MCU                        Gazebo
+                    ↓
+                   実機
 ```
 
-同時に両方をsubscriberとして接続しない。
+これにより、1回のMotion SENDで同じ24軸target列が実機経路とGazebo経路へ配信される。
+
+### 安全トポロジ
+
+通常Operatorでは `/cmdForJetson` subscriberを次の組合せだけ許可する。
+
+```text
+必須:
+  /lily_operator
+
+追加で許可:
+  /lily_gazebo_mcu_position_interpolator
+```
+
+したがって:
+
+```text
+StateMachineのみ                         -> OK
+StateMachine + Gazebo MCU interpolator  -> OK
+Gazeboのみ                              -> NG
+未知subscriber追加                      -> NG
+別の/cmdForJetson publisher            -> NG
+```
+
+Motion SEND中もトポロジを再確認し、許可されない構成へ変化した場合はposition出力を中断する。
 
 ---
 
-## 4. 基本起動順序
+## 4. 実機 + Gazebo同期の起動順序
 
-### Terminal 1: ROS master
-
-```bash
-source /opt/ros/melodic/setup.bash
-source ~/catkin_ws/devel/setup.bash
-roscore
-```
-
-### 別途: Gazebo + Lily model + joint controllers
+### 1. Gazebo model / joint controllersを起動
 
 既存のGazebo環境側の手順で起動する。
 
-本repositoryにはこのlaunch commandを現在保持していない。
+### 2. 通常の `Lily Operator` を起動
 
-### Terminal 2: Gazebo MCU-equivalent interpolator
+物理CAN `can0` を使用する。
+
+Controlで通常どおり:
+
+```text
+Connected
+  ↓
+ALIGN
+  ↓
+HOME
+  ↓
+RUN
+```
+
+まで進める。
+
+### 3. Gazebo MCU interpolatorを起動
 
 repository rootで:
 
@@ -117,52 +153,30 @@ python2 tools/gazebo/mcu_position_interpolator_node.py \
   --update-period-sec 0.002
 ```
 
-### Terminal 3: subscriber確認
+### 4. `/cmdForJetson` の接続を確認
 
 ```bash
 rostopic info /cmdForJetson
 ```
 
-Gazebo時、意図したconsumerは `mcu_position_interpolator_node.py`。
+実機 + Gazebo同期時の意図したsubscriberは:
 
-CAN StateMachineが同時にsubscriberになっていないことを確認する。
+```text
+/lily_operator
+/lily_gazebo_mcu_position_interpolator
+```
+
+の2つ。
+
+### 5. MotionをSEND
+
+通常の `Lily Operator` のMotion tabでJSONLを `LOAD / CHECK` し、SENDする。
+
+別のpublisherを起動しない。
 
 ---
 
-## 5. staged JSONLをGazeboへ送る
-
-現行candidate:
-
-```bash
-CANDIDATE=data/reference_candidates/v3_0_44_candidate_022_wide_urdf0p075
-STAGED=$CANDIDATE/staged
-```
-
-### Air-entry
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/air_entry_and_hold_only_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-### Risk split example
-
-```bash
-python2 tools/publish_cmdforjetson_jsonl.py \
-  --command-log "$STAGED/roll_0_50_commands.jsonl" \
-  --resample-factor 2 \
-  --rate 10
-```
-
-他のstaged fileも同じpublisherで送る。
-
-実行コマンド一覧は [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) を参照する。
-
----
-
-## 6. Gazebo MCU interpolatorの引数
+## 5. Gazebo MCU interpolator parameter
 
 対象:
 
@@ -170,140 +184,54 @@ python2 tools/publish_cmdforjetson_jsonl.py \
 tools/gazebo/mcu_position_interpolator_node.py
 ```
 
+主な引数:
+
 | 引数 | default | 意味 |
 |---|---:|---|
-| `--input-topic` | `/cmdForJetson` | Jetson transport targetの入力topic |
-| `--interp-duration-sec` | `0.100` | 新target受信後、Gazebo側でMCU相当の線形補間を行う時間 [s] |
-| `--update-period-sec` | `0.002` | 補間結果をGazebo controllerへ更新する周期 [s] |
-| `--gazebo-topic-prefix` | empty | `GazeboCommandPublisher` へ渡すoptional topic prefix |
+| `--input-topic` | `/cmdForJetson` | 24軸target入力 |
+| `--interp-duration-sec` | `0.100` | MCU相当の補間時間 [s] |
+| `--update-period-sec` | `0.002` | Gazebo controllerへの出力周期 [s] |
+| `--gazebo-topic-prefix` | empty | optional topic prefix |
 
-注意:
-
-```text
---interp-duration-sec
-```
-
-はGazebo側でMCU挙動を模擬するparameterであり、Jetsonの
-
-```text
---resample-factor
---rate
-```
-
-とは別物。
-
-また、実MCU Configの
-
-```text
-interpolation_time_ms
-```
-
-とも別設定値である。
+同期比較では、可能なら実MCUの補間設定とGazebo側 `--interp-duration-sec` の関係を明示して評価する。
 
 ---
 
-## 7. 現行Gazebo comparison profile
+## 6. `resample_factor` とGazebo補間
 
-現在、staged validationで使用してきたprofile:
-
-```text
-Jetson transport
-  resample_factor = 2
-  rate            = 10 Hz
-
-Gazebo MCU equivalent
-  interp_duration = 0.100 s
-  update_period   = 0.002 s
-```
-
-このprofileはGazebo側で確認済みの比較条件として扱う。
-
-実MCUの `interpolation_time_ms` と完全に同値であるとは仮定せず、実機側は別途確認する。
-
----
-
-## 8. `resample_factor` とGazebo補間の違い
+Jetson/Operator側のresamplingとGazebo側補間は別処理。
 
 ```text
 source JSONL
-q0 ---------------- q1
-
-Jetson --resample-factor 2
-q0 ------ midpoint ------ q1
-
-Gazebo --interp-duration-sec
-各transport targetを受け取った後、
-Gazebo joint controllerへ向けて連続的に補間
+    ↓
+resample_factor
+    ↓
+/cmdForJetson target列
+    ↓
+Gazebo MCU interpolation
+    ↓
+Gazebo controller update
 ```
 
-つまり:
-
-- `resample_factor`: **Jetsonが送るtarget点そのものを増やす**
-- `interp-duration-sec`: **Gazebo側で1 targetへ滑らかに遷移する**
-
-である。
-
-Jetson側引数の詳細は [`JETSON_ARGUMENT_REFERENCE.md`](JETSON_ARGUMENT_REFERENCE.md) を参照する。
+- `resample_factor`: `/cmdForJetson` に送るtarget点を増やす
+- `interp-duration-sec`: 各target受信後のMCU相当遷移をGazebo側で模擬する
 
 ---
 
-## 9. Development direct replay
+## 7. 注意事項
 
-次も存在する。
-
-```text
-tools/gazebo/run_v3_0_gazebo_replay.py
-```
-
-これはdevelopment / direct Gazebo replay用。
-
-現行の実機比較では、原則として
-
-```text
-publish_cmdforjetson_jsonl.py
-→ /cmdForJetson
-→ mcu_position_interpolator_node.py
-```
-
-のshared pathを優先する。
-
-理由は、実機とGazeboで `/cmdForJetson` より上流を共通化できるため。
+- 実機 + Gazebo同期時は `Lily Operator (Gazebo)` を同時起動しない。
+- CAN-to-Gazebo Sync Bridgeは廃止済みであり、使用しない。
+- `/cmdForJetson` の別publisherを追加しない。
+- 実機とGazeboは同じ上流targetを受けるが、ROS scheduling、CAN送信、MCU処理、Gazebo schedulingにより完全なハードリアルタイム同期ではない。
 
 ---
 
-## 10. Gazeboで確認するときのチェック
+## 8. 関連文書
 
-```text
-[ ] Gazebo + Lily model + joint controllersが起動済み
-[ ] roscore起動済み
-[ ] mcu_position_interpolator_node.py起動済み
-[ ] CAN StateMachineは起動していない
-[ ] /cmdForJetson subscriberが意図どおり
-[ ] 使用candidate / staged fileを確認
-[ ] resample_factor / rateを確認
-[ ] Gazebo interp duration / update periodを確認
-```
-
----
-
-## 11. 現在の不足
-
-本repository内でGazeboを完全に自己完結させるには、まだ次が不足している。
-
-```text
-Gazebo world / Lily model / joint controllerの起動手順
-または
-それらをまとめたlaunch file
-```
-
-既存のGazebo環境が別repository / catkin packageにある場合、その正確な起動方法をこの文書へ接続すると、clone後の再現性がさらに高くなる。
-
----
-
-## 12. 関連文書
-
-- [`COPY_PASTE_COMMANDS.md`](COPY_PASTE_COMMANDS.md) — 実行コマンド
-- [`JETSON_ARGUMENT_REFERENCE.md`](JETSON_ARGUMENT_REFERENCE.md) — Jetson側引数
-- [`RUNTIME_ARCHITECTURE.md`](RUNTIME_ARCHITECTURE.md) — 実機 / Gazeboのprogram境界
-- [`CURRENT_BASELINE.md`](CURRENT_BASELINE.md) — current candidate / profile
-- [`VALIDATION_STATUS.md`](VALIDATION_STATUS.md) — current verification status
+- `tools/operator_ui/DESKTOP_LAUNCHER.md`
+- `docs/COPY_PASTE_COMMANDS.md`
+- `docs/JETSON_ARGUMENT_REFERENCE.md`
+- `docs/RUNTIME_ARCHITECTURE.md`
+- `docs/CURRENT_BASELINE.md`
+- `docs/VALIDATION_STATUS.md`
