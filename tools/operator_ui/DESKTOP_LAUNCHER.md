@@ -1,10 +1,10 @@
 # Lily Operator desktop launcher
 
-The desktop launchers provide intentionally separated operating modes without changing the CAN protocol or MCU firmware.
+The desktop launchers provide three operating modes without changing the CAN protocol or MCU firmware.
 
 ## One-time installation
 
-From the `lily_motion` repository on each PC / Jetson:
+From the `lily_motion` repository:
 
 ```bash
 git checkout feature/monitor-csv-load
@@ -12,147 +12,110 @@ git pull
 bash tools/operator_ui/install_desktop_launcher.sh
 ```
 
-This installs four launch entries on the Desktop and in the application menu:
+This installs:
 
 - `Lily Operator` — physical CAN (`can0`) for hardware operation;
 - `Lily Operator (vcan0)` — virtual CAN + MCU emulator for PC-side software testing;
-- `Lily Operator (Gazebo)` — Gazebo-only motion path with CAN StateMachine disabled;
-- `Lily Gazebo Sync Bridge` — external receive-only bridge used **together with the normal physical Lily Operator** to mirror commands already sent on CAN into Gazebo.
+- `Lily Operator (Gazebo)` — Gazebo-only motion path with CAN StateMachine disabled.
 
-On some Ubuntu 18.04 desktops, the first double-click may ask whether the desktop file should be trusted. Choose `Trust and Launch`.
+The installer also removes obsolete desktop entries from the abandoned CAN-to-Gazebo Sync Bridge experiment.
 
 ## Physical CAN use
 
 Double-click `Lily Operator`.
 
-The launcher performs these checks in order:
+The launcher:
 
-1. Find `can0` (or `LILY_CAN_CHANNEL`).
-2. If CAN is already `UP` at `500000 bit/s`, leave it unchanged.
-3. Otherwise request administrator authentication and configure the physical CAN interface.
-4. Source `/opt/ros/melodic/setup.bash`.
-5. Source `~/catkin_ws/devel/setup.bash` when that file exists.
-6. Check whether a ROS master is already reachable.
-7. Start `roscore` only when no ROS master is reachable.
-8. Start `tools/operator_ui/lily_operator_integrated.py` with the selected SocketCAN channel.
+1. finds `can0` (or `LILY_CAN_CHANNEL`);
+2. leaves it unchanged if it is already UP at `500000 bit/s`;
+3. otherwise requests administrator authentication and configures the physical CAN interface;
+4. sources ROS Melodic and the catkin workspace when present;
+5. reuses a reachable ROS master or starts `roscore` when needed;
+6. starts the existing integrated Lily Operator UI.
 
-Physical CAN setup uses administrator permission only for the `ip link` commands. The Operator UI itself runs as the logged-in user.
+The hardware command path remains:
 
-When configuration is required, the physical-CAN path is equivalent to:
-
-```bash
-sudo ip link set can0 down   # tolerated if already down
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
+```text
+Lily Operator Motion
+    ↓
+/cmdForJetson
+    ↓
+/lily_operator StateMachine
+    ↓
+CAN
+    ↓
+MCU / hardware
 ```
 
 ## Virtual CAN use
 
 Double-click `Lily Operator (vcan0)`.
 
-Virtual CAN has no physical bus bitrate, so the launcher does **not** apply the `500000 bit/s` setting to `vcan0`.
+If `vcan0` does not exist, the launcher creates and brings it UP. Virtual CAN has no physical bitrate, so no CAN bitrate is applied to `vcan0`.
 
-If `vcan0` already exists and is UP, it is reused unchanged. If it exists but is down, the launcher brings it UP. If it does not exist, the launcher requests administrator authentication and performs the equivalent of:
-
-```bash
-sudo modprobe vcan
-sudo ip link add dev vcan0 type vcan
-sudo ip link set vcan0 up
-```
-
-The same integrated Operator UI opens with `--can-channel vcan0`. A vcan interface by itself does not emulate MCU behavior; ALIGN/HOME/RUN acknowledgements, telemetry, Config responses, and other MCU-originated frames require the MCU emulator.
+The same integrated Operator UI is used; MCU-originated responses still require the separate MCU emulator.
 
 ## Gazebo-only use
 
 Double-click `Lily Operator (Gazebo)`.
 
-Gazebo-only mode deliberately does **not** create a CAN bus or a CAN StateMachine. It uses the shared command boundary:
+This deliberately does not create a CAN StateMachine. It uses:
 
 ```text
-JSONL Motion UI
+Gazebo-only Motion UI
     ↓
 /cmdForJetson
     ↓
-tools/gazebo/mcu_position_interpolator_node.py
+/lily_gazebo_mcu_position_interpolator
     ↓
 24 Gazebo joint controller topics
     ↓
 Lily Gazebo model
 ```
 
-The existing Motion safety topology check remains active. `/cmdForJetson` must have the intended single consumer for this mode.
+The Gazebo model and joint controllers must already be running in the existing Gazebo environment.
 
-## Simultaneous hardware + Gazebo synchronization
+## Hardware + Gazebo synchronized command use
 
-For synchronization, do **not** use `Lily Operator (Gazebo)`. Use the normal physical `Lily Operator` and the external `Lily Gazebo Sync Bridge`.
+For synchronized comparison, use the **normal `Lily Operator`**, not a separate Sync Bridge.
 
-```text
-normal Lily Operator Motion
-        ↓
-/cmdForJetson
-        ↓
-existing StateMachine
-        ↓
-CAN 0x400+axis
-        ├────────→ real MCU
-        └→ candump receive-only
-               ↓
-        CAN->Gazebo sync bridge
-               ↓
-        Gazebo joint controllers
-```
-
-The sync bridge is intentionally outside Lily Operator. It does not modify or replace:
-
-- `lily_operator_integrated.py`;
-- MotionPanel;
-- StateMachine;
-- the CAN protocol;
-- MCU firmware/config behavior.
-
-It also does **not** subscribe to `/cmdForJetson`, so the existing Motion `exactly one subscriber` protection remains unchanged.
-
-Recommended startup order:
-
-1. Start Gazebo + Lily model + joint controllers.
-2. Double-click `Lily Operator` and operate the real hardware normally through ALIGN / HOME / RUN.
-3. Double-click `Lily Gazebo Sync Bridge`.
-4. LOAD / CHECK and SEND from the normal Lily Operator.
-
-The sync launcher refuses to start if the normal `/lily_operator` is not running or if the Gazebo-only `/lily_gazebo_mcu_position_interpolator` is still running.
-
-Detailed procedure and architecture are in:
-
-```text
-tools/gazebo/CAN_GAZEBO_SYNC.md
-```
-
-## Mode summary
-
-```text
-Lily Operator
-  /cmdForJetson -> CAN StateMachine -> can0 -> MCU
-
-Lily Operator (vcan0)
-  /cmdForJetson -> CAN StateMachine -> vcan0 -> MCU emulator
-
-Lily Operator (Gazebo)
-  /cmdForJetson -> Gazebo MCU interpolator -> Gazebo joint controllers
-
-Lily Operator + Lily Gazebo Sync Bridge
-  /cmdForJetson -> existing CAN StateMachine -> can0 -> MCU
-                                           └-> receive-only CAN mirror -> Gazebo
-```
-
-## PC and Jetson
-
-The launchers are Bash scripts, not compiled x86_64 or ARM binaries. The same files can therefore be used on an x86_64 desktop PC and an aarch64 Jetson when the required local Python/ROS environment exists.
-
-You can confirm architecture with:
+Start the existing Gazebo MCU interpolator in the same ROS graph:
 
 ```bash
-uname -m
+source /opt/ros/melodic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+
+python2 tools/gazebo/mcu_position_interpolator_node.py \
+  --input-topic /cmdForJetson \
+  --interp-duration-sec 0.100 \
+  --update-period-sec 0.002
 ```
+
+Then one Motion SEND is shared directly:
+
+```text
+                     /cmdForJetson
+                          │
+             ┌────────────┴────────────┐
+             ↓                         ↓
+/lily_operator StateMachine   /lily_gazebo_mcu_position_interpolator
+             ↓                         ↓
+            CAN                Gazebo joint controllers
+             ↓                         ↓
+         real hardware                 Gazebo
+```
+
+The normal Operator safety policy remains restrictive:
+
+- `/lily_operator` StateMachine subscriber is mandatory;
+- `/lily_gazebo_mcu_position_interpolator` is the only optional second subscriber;
+- any unknown `/cmdForJetson` subscriber is rejected;
+- any additional `/cmdForJetson` publisher is rejected;
+- the topology is rechecked while Motion SEND is active and SEND is aborted if it changes to an unapproved topology.
+
+Thus hardware-only remains valid with one subscriber, while hardware + Gazebo is valid with the two known subscribers.
+
+Do not run `Lily Operator (Gazebo)` at the same time as the normal `Lily Operator` for synchronized hardware operation; use the standalone `mcu_position_interpolator_node.py` with the normal Operator instead.
 
 ## Logs
 
@@ -160,14 +123,6 @@ Launcher output is written under:
 
 ```text
 runtime_logs/operator_ui/launcher/
-```
-
-Relevant log patterns:
-
-```text
-launcher_*.log                 physical/vcan Operator
-gazebo_launcher_*.log          Gazebo-only Operator
-gazebo_sync_bridge_*.log       hardware + Gazebo sync bridge
 ```
 
 ## Environment overrides
@@ -182,15 +137,9 @@ LILY_CATKIN_SETUP    default: ~/catkin_ws/devel/setup.bash
 LILY_OPERATOR_LOG_ROOT
 ```
 
-Gazebo output parameters used by Gazebo-only and sync paths:
+Gazebo-only launcher additionally accepts:
 
 ```text
-LILY_GAZEBO_INTERP_DURATION    default: 0.100
-LILY_GAZEBO_UPDATE_PERIOD      default: 0.002
-```
-
-Sync bridge additionally accepts:
-
-```text
-LILY_GAZEBO_CAN_COALESCE_SEC   default: 0.002
+LILY_GAZEBO_INTERP_DURATION   default: 0.100
+LILY_GAZEBO_UPDATE_PERIOD     default: 0.002
 ```
