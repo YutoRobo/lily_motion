@@ -1,13 +1,13 @@
 # Lily Operator UI v0
 
-This branch-only UI keeps the maintained CAN StateMachine behavior while integrating the operator-facing controls into one window.
+This feature branch keeps the maintained CAN StateMachine behavior while integrating the operator-facing controls into one window.
 
 ## Quick start
 
 Update the feature branch and launch the integrated Operator UI with:
 
 ```bash
-git checkout feature/operator-ui-v0
+git checkout feature/monitor-csv-load
 git pull
 source /opt/ros/melodic/setup.bash
 source ~/catkin_ws/devel/setup.bash
@@ -18,6 +18,8 @@ python2 tools/operator_ui/lily_operator_integrated.py \
 ```
 
 Do **not** start `tools/can_interface/statemachine/main.py` in another terminal when using the integrated launcher.
+
+For normal desktop operation, `tools/operator_ui/install_desktop_launcher.sh` installs `Lily Operator`, `Lily Operator (vcan0)`, and `Lily Operator (Gazebo)` shortcuts.
 
 ## Preferred start: integrated Operator UI
 
@@ -209,12 +211,40 @@ SEND is enabled only when:
 - the file path and resample factor still match the checked stream;
 - the legacy RUN motion check is not active;
 - no Operator JSONL SEND is already active;
-- `/cmdForJetson` has exactly one subscriber;
+- `/cmdForJetson` has an approved subscriber topology;
 - no other ROS node is publishing `/cmdForJetson`.
 
-Publisher/subscriber topology is rechecked while SEND is active. If RUN is lost, another `/cmdForJetson` publisher appears, or the subscriber topology changes, the Operator UI stops publishing the remaining frames.
+For the normal integrated node `/lily_operator`, the approved `/cmdForJetson` subscriber topology is:
+
+```text
+hardware only:
+  /lily_operator
+
+hardware + Gazebo:
+  /lily_operator
+  /lily_gazebo_mcu_position_interpolator
+```
+
+`/lily_operator` is mandatory. The Gazebo MCU interpolator is the only optional second subscriber. Any unknown subscriber is rejected. Other MotionPanel hosts retain the previous exactly-one-subscriber rule.
+
+Publisher/subscriber topology is rechecked while SEND is active. If RUN is lost, another `/cmdForJetson` publisher appears, the required StateMachine subscriber disappears, or an unknown subscriber appears, the Operator UI stops publishing the remaining frames.
 
 While SEND is active, the Operator UI disables Use / ALIGN / HOME / RUN and legacy diagnostic-motion controls. The global STOP control remains available.
+
+## Hardware + Gazebo shared command
+
+The existing Gazebo splitter can subscribe to the same `/cmdForJetson` stream as the hardware StateMachine:
+
+```bash
+python2 tools/gazebo/mcu_position_interpolator_node.py \
+  --input-topic /cmdForJetson \
+  --interp-duration-sec 0.100 \
+  --update-period-sec 0.002
+```
+
+One Motion SEND then drives both the real hardware path and the Gazebo joint-controller path. The abandoned CAN-to-Gazebo Sync Bridge is not used.
+
+See `docs/GAZEBO_USAGE_GUIDE.md` and `tools/operator_ui/DESKTOP_LAUNCHER.md` for the operating sequence.
 
 ## Current motion defaults
 
@@ -227,13 +257,14 @@ This corresponds to the current operator baseline of RF5 / 10 Hz. Changing the r
 
 ## Tests
 
-The branch includes a pure JSONL/transport test that does not require Tkinter or CAN:
+Pure tests that do not require CAN hardware include:
 
 ```bash
 python2 tests/test_operator_motion_stream.py
+python2 tests/test_motion_topology.py
 ```
 
-It checks the HOME -> air-entry boundary, air-entry -> full-roll boundary, the 4 deg continuity rule, and invalid resample rejection.
+The topology test covers hardware-only, hardware + Gazebo, missing StateMachine, unknown subscriber, and connection-count mismatch cases.
 
 ## Scope of v0
 
